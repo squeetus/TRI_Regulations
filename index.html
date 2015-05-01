@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+    <link rel="stylesheet" type="text/css" href="src/TRIstyle.css">
+</head>
+
+<body>
+<div id="container">
+    <div id="title"><h1>Toxics Release Inventory</h1></div>
+    <div id="dataView">
+    </div>
+    
+    <svg id="map"></svg>
+    <div id="key">
+        <span style="color: red; display: inline-block; width: 100px">Releases</span>
+        <span style="color: green; display: inline-block; width: 100px">Recycling</span>
+        <span style="color: purple; display: inline-block; width: 100px">Treatment</span>
+        <span style="color: lightblue; display: inline-block; width: 100px">Recovery</span>
+    </div>
+    <svg id="graph"></svg>
+    
+    
+    <script src="resources/colorbrewer.js"></script>
+    <script src="resources/d3.v3.min.js"></script>
+    <script src="resources/topojson.v1.min.js"></script>
+    <script src="src/TRIscript.js"></script>
+    
+</div>
+</body>
+</html>

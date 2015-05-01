@@ -1,0 +1,155 @@
+///////////////////////////////////////////////////////////
+//
+//          Stylesheet for TRI data 
+//          Authors:
+//              David Burlinson & Yanli Xu
+//
+///////////////////////////////////////////////////////////
+
+body, #body {
+  background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);
+/*
+  overflow: hidden;
+  margin: 0;
+  font-size: 14px;
+  font-family: "Helvetica Neue", Helvetica;
+*/
+}
+
+h1 {
+ opacity: 0.6;   
+}
+
+.background {
+    fill: lightblue;
+    fill: none;
+/*    background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);*/
+    pointer-events: all;
+    border-radius: 5px;
+}
+
+#map {
+    border-radius: 5px;
+}
+
+.info1 {
+  min-width: 100%;
+  position: absolute; 
+  bottom: 0;
+}
+
+.info2 {    
+  top:33%;
+  min-width: 100%;
+  position: absolute; 
+  bottom: 0;
+}
+
+.info3 {
+  top: 66%;
+  min-width: 100%;
+  position: absolute; 
+  bottom: 0;
+}
+    
+.feature {
+  fill: tan;
+  //cursor: pointer;
+  
+}
+
+.feature.active {
+  fill: orange;
+}
+
+.stateMesh {
+  fill: none;
+  stroke: seashell;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+    
+.countyMesh {
+  fill: none;
+  stroke: #DDDDDD;
+  stroke-width: 0.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 2,1;
+}
+
+#container {
+    height:100vh;
+  background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);
+}
+
+#dataView {
+    position: absolute;
+    min-width:200px;
+    min-height: 50px;
+    max-width:300px;
+    padding: 15px;
+    border-radius: 5px;
+    border: 2px solid black;
+    background-color: lightslategrey;
+    opacity: 0;
+    pointer-events: none;
+}    
+    
+#pCoord {
+    position: absolute;
+    left: 50px;
+    width: 85%;
+    height: 175px;
+}
+    
+#graph {
+/*background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);*/
+}
+
+#key {
+    position: absolute;
+    top: 1000;
+    left: 500px;
+    opacity: 0;
+}   
+    
+#title {
+    position: absolute;
+    width:100%;
+    text-align: center;
+    pointer-events: none;
+}
+    
+.brush .extent {
+  fill-opacity: .1;
+  stroke: #fff;
+  shape-rendering: crispEdges;
+}
+
+.brushed {
+  fill: white;
+/*  opacity: .5;*/
+}
+
+.facility {
+    stroke: black;  
+}
+
+.facility.scanned {
+  fill: orange;
+  fill-opacity: 1;
+  stroke: brown;
+}
+
+.facility.selected {
+  fill: red;
+  fill-opacity: 1;
+}
+
+.node {
+  fill: none;
+  stroke: green;
+  shape-rendering: crispEdges;
+  display: none;
+}
