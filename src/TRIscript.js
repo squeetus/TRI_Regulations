@@ -82,8 +82,8 @@ var g1 = svg.append("g")
 //          U S A
 //
 /////////////////////////////////////////////////////////////////////////////
-    
-d3.json("/TRI/project2/data/us.json", function(error, us) {
+    ///TRI/project2/data/us.json
+d3.json("data/us.json", function(error, us) {
   g.selectAll("path")
       .data(topojson.feature(us, us.objects.states).features)
     .enter().append("path")
@@ -112,7 +112,7 @@ d3.json("/TRI/project2/data/us.json", function(error, us) {
 //
 /////////////////////////////////////////////////////////////////////////////    
     
-d3.json("/TRI/project2/data/facilities.json", function(error, f) {
+d3.json("data/facilities.json", function(error, f) {
     //console.log(error);
     var arr = [];
     var x, y;
