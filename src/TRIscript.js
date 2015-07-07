@@ -2,7 +2,7 @@
 //      
 //          TRI Dataset Visualization version 1.1
 //          Created by 
-//              David Burlinson & Yanli Xu
+//              David Burlinson
 //
 /////////////////////////////////////////////////////////////////////////////       
     
@@ -12,7 +12,9 @@ var translate = [0,0];
 var nodeSize = 2;
 var strokeWidth = 0.5;
 var facilities = null;
+var states = null;
 var prevColor = null;
+var brushing = false;
 
 var total = null;
 resetTotal();
@@ -28,7 +30,7 @@ var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);
 
 
 var zoom = d3.behavior.zoom()
-    .scaleExtent([0.75,10])
+    .scaleExtent([0.75,100])
     .x(x_scale)
     .y(y_scale)
     .on("zoom", zoomHandler)
@@ -88,8 +90,8 @@ d3.json("data/us.json", function(error, us) {
       .data(topojson.feature(us, us.objects.states).features)
     .enter().append("path")
       .attr("d", path)
-      .attr("class", "feature");
-      //.on("click", clicked);
+      .attr("class", "feature")
+      .on("click", clickedState);
     
     //Counties
 //    g.insert("path", ".graticule")
@@ -97,10 +99,12 @@ d3.json("data/us.json", function(error, us) {
 //      .attr("class", "countyMesh")
 //      .attr("d", path);
   
-    g.append("path")
+    states = g.append("path")
       .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
       .attr("class", "stateMesh")
-      .attr("d", path);
+      .attr("d", path)
+      .attr("stroke-width", strokeWidth*2);
+      
 });
 
 
@@ -174,7 +178,7 @@ d3.json("data/facilities.json", function(error, f) {
         .on("mouseover", hover)
         .on("mouseout", out)
         .call(zoom);
-
+    
 });  
 
 /////////////////////////////////////////////////////////////////////////////
@@ -204,8 +208,15 @@ svg.append("g")
     .attr("class", "brush")
     .call(brush);
 
+// Clear brush at first
+d3.select(".brush")
+    .style("display", "none"); 
+d3.selectAll(".brush").call(brush.clear());
 
-
+d3.select("#graph") 
+    .style("opacity", 0);
+d3.select("#key")
+    .style("opacity", 0);
 /////////////////////////////////////////////////////////////////////////////
 //      
 //          L I N E   G R A P H
@@ -293,7 +304,22 @@ function lineGraph(d) {
 //
 /////////////////////////////////////////////////////////////////////////////
     
+function clickedState(d) {
+    console.log("Clicked state ", d);   
+    
+    highlightState(d);
+}
+
+function highlightState(d) {
+    console.log("Highlighting state ", d.id);   
+}
+
 function hover(d) {
+    if(brushing)
+        return;
+//    
+//    console.log(d3.select(this));
+//        
     d3.select("#graph")
             .style("opacity", 1);
     
@@ -307,24 +333,23 @@ function hover(d) {
         })
         .style("top", d3.event.pageY - 25 + "px");
     
-    //Style the selected facility
+   //Style the selected facility
     prevColor = d3.select(this).style("fill");
     d3.select(this)
-        .style("fill", "white");
-//        .attr("r", function(d) {
-//                console.log(d);
-//                return this.r.animVal.value/scaleFactor} //rather than nodeSize
-//             );
+        .classed("brushed", true);
     
+    //Create line graph
     lineGraph(d);
  
+    //Show data div
     showData(dataDiv, d);
 }
         
 function out() { 
     d3.select(this)
-        .style("fill", prevColor);
+        .classed("brushed", false);
     
+    prevColor = null;
     showData(null, null);
     d3.select("#graph").selectAll("*").remove();
     
@@ -350,17 +375,20 @@ var g1 = svg.append("g")
     .style("stroke-width", "1.5px");
 
 function brushstart() {
+    brushing = true;
     facilities.each(function(d) { d.scanned = d.selected = false; });
 }
 
 function brushed() {
+
+}
+
+function brushend() {
     var these = d3.select(null);
     var extent = brush.extent();
     facilities.each(function(d) { d.scanned = d.selected = false; });
-    //these.each(function(d) { d.scanned = d.selected = false; });
     search(quadtree, extent[0][0], extent[0][1], extent[1][0], extent[1][1]);
-    facilities.classed("brushed", function(d) { return d.selected; } );
-    
+    facilities.classed("brushed", function(d) { return d.selected; });
     facilities.each(function(d, i) {
         if(!d.selected && total.contains.indexOf(i) >= 0) {
             total.contains.splice(total.contains.indexOf(i), 1);
@@ -388,11 +416,26 @@ function brushed() {
     }
     
     lineGraph(total);
+    //console.log("brushend");
+    brushing = false;
+//    brush.clear();
+//    facilities.each(function(d) { d.scanned = d.selected = false; });
+//    resetTotal();
 }
 
-function brushend() {
+
+function clearBrush() {
+    console.log("clearing brush");
+    d3.select(".brush")
+        .style("display", "none"); 
+    d3.selectAll(".brush").call(brush.clear());
     facilities.each(function(d) { d.scanned = d.selected = false; });
-    resetTotal();
+    facilities.classed("brushed", function(d) { return d.selected; } );
+    
+    d3.select("#graph") 
+        .style("opacity", 0);
+    d3.select("#key")
+        .style("opacity", 0);
 }
 
 function resetTotal() {
@@ -405,7 +448,6 @@ function resetTotal() {
     }
 }
 
-
 function zoomstart() { 
      if (event.shiftKey) 
          d3.select("#graph")
@@ -414,17 +456,20 @@ function zoomstart() {
         
 function zoomHandler() {
     
-    
     if (event.shiftKey) {
         d3.select(".brush")
             .style("display", "block"); 
-         d3.select("#graph")
+        d3.select("#graph")
+            .style("opacity", 1);
+        d3.select("#key")
             .style("opacity", 1);
         zoom.translate(translate);
         zoom.scale(scaleFactor);
     }
     else {
         d3.select("#graph")
+            .style("opacity", 0);
+        d3.select("#key")
             .style("opacity", 0);
         translate = d3.event.translate;
         scaleFactor = d3.event.scale;
@@ -438,6 +483,7 @@ function zoomHandler() {
     g.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
     facilities.attr("r", nodeSize/scaleFactor );
     facilities.attr("stroke-width", strokeWidth/scaleFactor);
+    states.attr("stroke-width", (strokeWidth*2)/scaleFactor);
 }
     
 function zoomend() {  
@@ -465,44 +511,16 @@ function search(quadtree, x0, y0, x3, y3) {
   });
 }
     
-function reset() {
-//    scaleFactor = 1;
-//    translate = [0,0];
-//    zoom.scale(1);
-//    zoom.translate([0,0]);
-//    svg.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
-    
-    facilities.attr("fill", "black").attr("r", nodeSize/scaleFactor).attr("opacity", "1");
-}
-    
-function throttle(fn, threshhold, scope) {
-  threshhold || (threshhold = 250);
-  var last,
-      deferTimer;
-  return function () {
-    var context = scope || this;
 
-    var now = +new Date,
-        args = arguments;
-    if (last && now < last + threshhold) {
-      // hold on to it
-      clearTimeout(deferTimer);
-      deferTimer = setTimeout(function () {
-        last = now;
-        fn.apply(context, args);
-      }, threshhold);
-    } else {
-      last = now;
-      fn.apply(context, args);
-    }
-  };
-}
 
 d3.select("body").on( 'keydown', function () { 
+    
+    // SPACE
     if ( d3.event.keyCode === 32 ) { 
-        reset();
+        clearBrush();
     }
     
+    // SHIFT
     if ( d3.event.keyCode === 16 ) { 
         d3.selectAll(".brush").call(brush.clear());
         d3.select(".brush")
@@ -513,4 +531,42 @@ d3.select("body").on( 'keydown', function () {
 }); 
 
 
+
+////////////////////////////////////////////////////////////
+//              UNUSED CODE
+////////////////////////////////////////////////////////////
+
+
+//function reset() {
+//    scaleFactor = 1;
+//    translate = [0,0];
+//    zoom.scale(1);
+//    zoom.translate([0,0]);
+//    svg.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
+//    
+//    facilities.attr("fill", "black").attr("r", nodeSize/scaleFactor).attr("opacity", "1");
+//}
+    
+//function throttle(fn, threshhold, scope) {
+//  threshhold || (threshhold = 250);
+//  var last,
+//      deferTimer;
+//  return function () {
+//    var context = scope || this;
+//
+//    var now = +new Date,
+//        args = arguments;
+//    if (last && now < last + threshhold) {
+//      // hold on to it
+//      clearTimeout(deferTimer);
+//      deferTimer = setTimeout(function () {
+//        last = now;
+//        fn.apply(context, args);
+//      }, threshhold);
+//    } else {
+//      last = now;
+//      fn.apply(context, args);
+//    }
+//  };
+//}
     
