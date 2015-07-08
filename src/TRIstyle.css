@@ -2,7 +2,7 @@
 //
 //          Stylesheet for TRI data 
 //          Authors:
-//              David Burlinson & Yanli Xu
+//              David Burlinson
 //
 ///////////////////////////////////////////////////////////
 
@@ -123,6 +123,23 @@ h1 {
     opacity: 0;
 }   
     
+.popupMessage {
+    background-color: lightskyblue;
+    width: 80px;
+    height: 34px;
+    left: 20px;
+    top: 20px;
+    position: fixed;
+    border-radius: 2px;
+    border-bottom-right-radius: 15px;
+    padding: 1px;
+    vertical-align: middle;
+    line-height:30px;
+    text-align: center;
+    font-family: "Helvetica Neue", Helvetica;
+    
+}
+
 #title {
     position: absolute;
     width:100%;
@@ -139,6 +156,14 @@ h1 {
 .brushed {
   fill: white;
 /*  opacity: .5;*/
+}
+
+.fade {
+    opacity: .5;
+}
+
+.facility.fade {
+    opacity: 0.1;   
 }
 
 .facility {

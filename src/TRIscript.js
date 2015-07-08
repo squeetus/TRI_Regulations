@@ -11,10 +11,22 @@ var scaleFactor = 1;
 var translate = [0,0];
 var nodeSize = 2;
 var strokeWidth = 0.5;
-var facilities = null;
+var fac = null;
 var states = null;
+var stateLines = null;
 var prevColor = null;
 var brushing = false;
+var selectingState = false;
+var selectedState = null;
+var toolContext = "state";
+
+//Move to front
+d3.selection.prototype.moveToFront = function() { 
+    return this.each(function() { 
+      this.parentNode.appendChild(this); 
+    }); 
+  }; 
+
 
 var total = null;
 resetTotal();
@@ -28,7 +40,6 @@ var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);
 var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);
 
 
-
 var zoom = d3.behavior.zoom()
     .scaleExtent([0.75,100])
     .x(x_scale)
@@ -38,6 +49,7 @@ var zoom = d3.behavior.zoom()
     .on("zoomend", zoomend)
     zoom.scale(1)
     zoom.translate(translate);
+
 
 var quadtree = d3.geom.quadtree()
     .extent([[-1, -1], [width + 1, height1 + 1]])
@@ -62,23 +74,85 @@ var path = d3.geo.path()
 var svg = d3.select("#map")
     .attr("class", "map")
     .attr("width", width)
-    .attr("height", height1);
-        
-svg.call(zoom);
+    .attr("height", height1)
+    .call(zoom);
 
-svg.append("rect")
-    .attr("class", "background")
-    .attr("width", width)
-    .attr("height", height1);
-    //.on("click", reset);
 
-var g = svg.append("g")
+var usaLayer = svg.append("g")
     .style("stroke-width", "1.5px");
+
+
    
-var g1 = svg.append("g")
+var quadTreeLayer = svg.append("g")
     .style("stroke-width", "1.5px");
     
-   
+
+var backgroundRect = quadTreeLayer.append("rect")
+    .attr("class", "background")
+    .attr("width", width)
+    .attr("height", height1)
+    .on("click", clickedBackground);
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          Z O O M   E V E N T S
+//
+/////////////////////////////////////////////////////////////////////////////
+
+function zoomstart() { 
+//    console.log("zoomstart");
+     if (toolContext == ("brush") && event.shiftKey) 
+         d3.select("#graph")
+            .style("opacity", 0);
+}
+        
+function zoomHandler() {
+    
+    if (toolContext == ("brush") && event.shiftKey) {
+        d3.select(".brush")
+            .style("display", "block"); 
+        d3.select("#graph")
+            .style("opacity", 1);
+        d3.select("#key")
+            .style("opacity", 1);
+        zoom.translate(translate);
+        zoom.scale(scaleFactor);
+    } else if(toolContext == ("brush")) {
+        d3.select(".brush")
+            .style("display", "none"); 
+       
+        translate = d3.event.translate;
+        scaleFactor = d3.event.scale;
+    } else {
+        clearBrush();
+        translate = d3.event.translate;
+        scaleFactor = d3.event.scale;
+//        d3.select(".brush")
+//            .style("display", "none"); 
+//        brush.clear();   
+    }
+    
+    
+    quadTreeLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+    usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+    fac.attr("r", nodeSize/scaleFactor );
+    fac.attr("stroke-width", strokeWidth/scaleFactor);
+    stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
+}
+    
+function zoomend() {  
+    if(toolContext == ("brush") && !event.shiftKey) {
+        clearEffects();
+        brushLayer.moveToFront();
+        d3.selectAll(".brush").call(brush.clear());
+        d3.select(".brush")
+            .style("display", "block"); 
+        toolContext = "brush";
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////
 //      
 //          U S A
@@ -86,20 +160,23 @@ var g1 = svg.append("g")
 /////////////////////////////////////////////////////////////////////////////
     ///TRI/project2/data/us.json
 d3.json("data/us.json", function(error, us) {
-  g.selectAll("path")
+  states = usaLayer.selectAll("path")
       .data(topojson.feature(us, us.objects.states).features)
     .enter().append("path")
       .attr("d", path)
       .attr("class", "feature")
-      .on("click", clickedState);
+      .on("click", function(d) {
+        if (d3.event.defaultPrevented) return; 
+        clickedState(d);
+      });
     
     //Counties
-//    g.insert("path", ".graticule")
+//    usaLayer.insert("path", ".graticule")
 //      .datum(topojson.mesh(us, us.objects.counties, function(a, b) { return a !== b && !(a.id / 1000 ^ b.id / 1000); }))
 //      .attr("class", "countyMesh")
 //      .attr("d", path);
   
-    states = g.append("path")
+    stateLines = usaLayer.append("path")
       .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
       .attr("class", "stateMesh")
       .attr("d", path)
@@ -116,6 +193,11 @@ d3.json("data/us.json", function(error, us) {
 //
 /////////////////////////////////////////////////////////////////////////////    
     
+
+
+//var facilityLayer = svg.append("g")
+//    .style("stroke-width", "1.5px");
+
 d3.json("data/facilities.json", function(error, f) {
     //console.log(error);
     var arr = [];
@@ -153,19 +235,21 @@ d3.json("data/facilities.json", function(error, f) {
      color.domain([d3.max(domain), d3.mean(domain), d3.min(domain)])
 //console.log(d3.extent(domain));
     
-    
     quadtree = quadtree(arr);
     
-    g1.selectAll(".node")
+    quadTreeLayer = usaLayer.selectAll(".node")
+    // quadTreeLayer.selectAll(".node")
         .data(nodes(quadtree))
       .enter().append("rect")
         .attr("class", "node")
         .attr("x", function(d) { return d.x; })
         .attr("y", function(d) { return d.y; })
         .attr("width", function(d) { return d.width; })
-        .attr("height", function(d) { return d.height; });
+        .attr("height", function(d) { return d.height; })
+        .attr("pointer-events", "none");
 
-    facilities = g1.selectAll(".facility")
+//    facilityLayer = quadTreeLayer.selectAll(".facility")
+    fac = usaLayer.selectAll(".facility")
         .data(arr)
       .enter().append("circle")
         .attr("class", "facility")
@@ -181,30 +265,43 @@ d3.json("data/facilities.json", function(error, f) {
     
 });  
 
+// Collapse the quadtree into an array of rectangles.
+function nodes(quadtree) {
+  var nodes = [];
+  quadtree.visit(function(node, x1, y1, x2, y2) {
+    nodes.push({x: x1, y: y1, width: x2 - x1, height: y2 - y1});
+  });
+  return nodes;
+}
+
+// Find the nodes within the specified rectangle.
+function search(quadtree, x0, y0, x3, y3) {
+  quadtree.visit(function(node, x1, y1, x2, y2) {
+    var p = node.point;
+    if (p) {
+      p.scanned = true;
+      p.selected = (p.x >= x0) && (p.x < x3) && (p.y >= y0) && (p.y < y3);
+    }
+    return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
+  });
+}
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 //      
 //          B R U S H
 //
 ///////////////////////////////////////////////////////////////////////////// 
 
-//var brush = svg.append("g")
-//      .attr("class", "brush")
-//      .call(d3.svg.brush()
-//        .x(d3.scale.identity().domain([0, width]))
-//        .y(d3.scale.identity().domain([0, height]))
-//        .on("brush", brushed);
-
 var brush = d3.svg.brush()
-    //.x(d3.scale.identity().domain([0, width]))
-    //.y(d3.scale.identity().domain([0, height]))
     .x(zoom.x())
     .y(zoom.y())
-    //.extent([[100, 100], [200, 200]])
-    .on("brush", brushed)
+    .on("brush", brush)
     .on("brushstart", brushstart)
     .on("brushend", brushend);
 
-svg.append("g")
+var brushLayer = svg.append("g")
     .attr("class", "brush")
     .call(brush);
 
@@ -222,6 +319,24 @@ d3.select("#key")
 //          L I N E   G R A P H
 //
 ///////////////////////////////////////////////////////////////////////////// 
+
+function clickedBackground() {
+//    console.log("clickedBackground");
+    clearState();
+};
+
+function clearEffects() {
+    //console.log("clearEffects ");
+    
+    if(brush)
+        clearBrush();
+    
+    if(states)
+        clearState();
+    
+    d3.select("#graph") 
+        .style("opacity", 0);
+};
 
 function lineGraph(d) {
     d3.select("#key")
@@ -305,13 +420,20 @@ function lineGraph(d) {
 /////////////////////////////////////////////////////////////////////////////
     
 function clickedState(d) {
-    console.log("Clicked state ", d);   
-    
     highlightState(d);
 }
 
 function highlightState(d) {
-    console.log("Highlighting state ", d.id);   
+    var thisState = d.id;
+    if(thisState == selectedState) {
+        states.classed("fade", false);
+        fac.classed("fade", function(d) { return false; });
+        selectedState = null;
+    } else { 
+        states.classed("fade", function(d) { return d.id != thisState;  });
+        fac.classed("fade", function(d) { return true; });
+        selectedState = thisState;
+    }
 }
 
 function hover(d) {
@@ -371,25 +493,41 @@ function showData(facility, d) {
     }
 }
     
-var g1 = svg.append("g")
+var quadTreeLayer = svg.append("g")
     .style("stroke-width", "1.5px");
 
 function brushstart() {
+//    console.log("brushstart");
     brushing = true;
-    facilities.each(function(d) { d.scanned = d.selected = false; });
+//    facilities.each(function(d) { d.scanned = d.selected = false; });
+    clearFacilities();
+//    resetTotal();
+//    lineGraph(total);
 }
 
-function brushed() {
 
+function brushed() {
+    console.log("brushed");
 }
 
 function brushend() {
+    
+    if(!event.shiftKey) {
+        brushing = false;
+        brush.clear();
+        usaLayer.moveToFront();
+        quadTreeLayer.moveToFront();
+        brushLayer.moveToFront();   
+        
+        return;
+    }
+    
     var these = d3.select(null);
     var extent = brush.extent();
-    facilities.each(function(d) { d.scanned = d.selected = false; });
+    fac.each(function(d) { d.scanned = d.selected = false; });
     search(quadtree, extent[0][0], extent[0][1], extent[1][0], extent[1][1]);
-    facilities.classed("brushed", function(d) { return d.selected; });
-    facilities.each(function(d, i) {
+    fac.classed("brushed", function(d) { return d.selected; });
+    fac.each(function(d, i) {
         if(!d.selected && total.contains.indexOf(i) >= 0) {
             total.contains.splice(total.contains.indexOf(i), 1);
             for(var j = 0; j < 27; j++) {
@@ -418,25 +556,47 @@ function brushend() {
     lineGraph(total);
     //console.log("brushend");
     brushing = false;
-//    brush.clear();
-//    facilities.each(function(d) { d.scanned = d.selected = false; });
-//    resetTotal();
+    brush.clear();
+    usaLayer.moveToFront();
+    quadTreeLayer.moveToFront();
+    brushLayer.moveToFront();
 }
 
 
 function clearBrush() {
-    console.log("clearing brush");
+//    console.log("clearing brush");
     d3.select(".brush")
         .style("display", "none"); 
     d3.selectAll(".brush").call(brush.clear());
-    facilities.each(function(d) { d.scanned = d.selected = false; });
-    facilities.classed("brushed", function(d) { return d.selected; } );
+    fac.each(function(d) { d.scanned = d.selected = false; });
+    fac.classed("brushed", function(d) { return d.selected; } );
     
+    hideGraph();
+}
+
+function clearFacilities() {
+    fac.each(function(d) { d.scanned = d.selected = false; });
+    fac.classed("brushed", function(d) { return d.selected; } );
+    
+    hideGraph();
+}
+
+function hideGraph() {
+//    console.log("hidegraph");
     d3.select("#graph") 
         .style("opacity", 0);
     d3.select("#key")
         .style("opacity", 0);
 }
+
+function clearState() {
+    selectedState = null;
+    selectingState = false;
+    states.classed("fade", false);
+    //console.log("clearing state");
+    fac.classed("fade", function(d) { return false; });
+}
+
 
 function resetTotal() {
     total = {
@@ -448,125 +608,119 @@ function resetTotal() {
     }
 }
 
-function zoomstart() { 
-     if (event.shiftKey) 
-         d3.select("#graph")
-            .style("opacity", 0);
-}
-        
-function zoomHandler() {
-    
-    if (event.shiftKey) {
-        d3.select(".brush")
-            .style("display", "block"); 
-        d3.select("#graph")
-            .style("opacity", 1);
-        d3.select("#key")
-            .style("opacity", 1);
-        zoom.translate(translate);
-        zoom.scale(scaleFactor);
-    }
-    else {
-        d3.select("#graph")
-            .style("opacity", 0);
-        d3.select("#key")
-            .style("opacity", 0);
-        translate = d3.event.translate;
-        scaleFactor = d3.event.scale;
-        d3.select(".brush")
-            .style("display", "none"); 
-        brush.clear();
-    }
-    
-    
-    g1.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-    g.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-    facilities.attr("r", nodeSize/scaleFactor );
-    facilities.attr("stroke-width", strokeWidth/scaleFactor);
-    states.attr("stroke-width", (strokeWidth*2)/scaleFactor);
-}
-    
-function zoomend() {  
-    
-}
-
-// Collapse the quadtree into an array of rectangles.
-function nodes(quadtree) {
-  var nodes = [];
-  quadtree.visit(function(node, x1, y1, x2, y2) {
-    nodes.push({x: x1, y: y1, width: x2 - x1, height: y2 - y1});
-  });
-  return nodes;
-}
-
-// Find the nodes within the specified rectangle.
-function search(quadtree, x0, y0, x3, y3) {
-  quadtree.visit(function(node, x1, y1, x2, y2) {
-    var p = node.point;
-    if (p) {
-      p.scanned = true;
-      p.selected = (p.x >= x0) && (p.x < x3) && (p.y >= y0) && (p.y < y3);
-    }
-    return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
-  });
-}
-    
 
 
-d3.select("body").on( 'keydown', function () { 
-    
-    // SPACE
-    if ( d3.event.keyCode === 32 ) { 
-        clearBrush();
-    }
-    
-    // SHIFT
-    if ( d3.event.keyCode === 16 ) { 
-        d3.selectAll(".brush").call(brush.clear());
-        d3.select(".brush")
-            .style("display", "block"); 
-        
-    }
-    
-}); 
+
+
+var tooltip = d3.select('#tooltip')
+     .attr('class', 'popupMessage')
+     .style('opacity', 0);
+
+function popupTooltip(message) {
+    tooltip.text(message);
+    tooltip.transition().delay(50).style('opacity', 0.9).duration(300).transition().delay(1500).style('opacity', 0.0).duration(750);
+}
+
+function reorderLayers() {
+    console.log("reorder layers");
+    //backgroundLayer.moveToFront();
+    usaLayer.moveToFront();
+    quadTreeLayer.moveToFront();
+    brushLayer.moveToFront();
+}
+
+
+
+
+
+
 
 
 
 ////////////////////////////////////////////////////////////
-//              UNUSED CODE
-////////////////////////////////////////////////////////////
-
-
-//function reset() {
-//    scaleFactor = 1;
-//    translate = [0,0];
-//    zoom.scale(1);
-//    zoom.translate([0,0]);
-//    svg.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
-//    
-//    facilities.attr("fill", "black").attr("r", nodeSize/scaleFactor).attr("opacity", "1");
-//}
-    
-//function throttle(fn, threshhold, scope) {
-//  threshhold || (threshhold = 250);
-//  var last,
-//      deferTimer;
-//  return function () {
-//    var context = scope || this;
 //
-//    var now = +new Date,
-//        args = arguments;
-//    if (last && now < last + threshhold) {
-//      // hold on to it
-//      clearTimeout(deferTimer);
-//      deferTimer = setTimeout(function () {
-//        last = now;
-//        fn.apply(context, args);
-//      }, threshhold);
-//    } else {
-//      last = now;
-//      fn.apply(context, args);
-//    }
-//  };
-//}
+//              I N I T   F U N C T I O N S
+//
+////////////////////////////////////////////////////////////
+
+
+function bindKeys() {
+    
+    d3.select("body").on( 'keydown', function () { 
+        // SPACE
+        if ( d3.event.keyCode === 32 ) {
+            //reorderLayers();
+            
+            clearBrush();
+            clearState();
+            d3.select("#graph") 
+                .style("opacity", 0);
+        }
+
+        // SHIFT
+        if ( d3.event.keyCode === 16 ) { 
+//            d3.selectAll(".brush").call(brush.clear());
+//            d3.select(".brush")
+//                .style("display", "block"); 
+        }
+        
+        // ONE
+        if ( d3.event.keyCode === 49 ) {
+//            console.log("ONE");   
+            popupTooltip("state");
+            clearEffects();
+            usaLayer.moveToFront();
+            quadTreeLayer.moveToFront();
+            backgroundRect.moveToFront();
+            toolContext = "state";
+        }
+        // TWO
+        if ( d3.event.keyCode === 50 ) {
+//            console.log("TWO");   
+            popupTooltip("brush");
+            clearEffects();
+            brushLayer.moveToFront();
+            d3.selectAll(".brush").call(brush.clear());
+            d3.select(".brush")
+                .style("display", "block"); 
+            toolContext = "brush";
+        }
+        // THREE
+        if ( d3.event.keyCode === 51 ) {
+            clearEffects();
+            console.log("THREE");   
+        }
+        
+    }); 
+}
+
+
+
+////////////////////////////////////////////////////////////
+//
+//              I N I T   
+//
+////////////////////////////////////////////////////////////
+
+function init() {
+    console.log("init!");
+    bindKeys();
+    
+    usaLayer.moveToFront();
+    quadTreeLayer.moveToFront();
+}
+
+
+////////////////////////////////////////////////////////////
+//
+//              M A I N   
+//
+////////////////////////////////////////////////////////////
+(function main() {
+    console.log("main!"); 
+    
+    
+    init(); 
+})();
+
     
