@@ -116,6 +116,18 @@ h1 {
 /*background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);*/
 }
 
+#stack {
+    float:left;
+    max-width: 50px;
+    height: 200px;
+}
+
+.stackEle {
+    fill: lightskyblue;  
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
 #key {
     position: absolute;
     top: 1000;
@@ -125,7 +137,7 @@ h1 {
     
 .popupMessage {
     background-color: lightskyblue;
-    width: 80px;
+    width: 100px;
     height: 34px;
     left: 20px;
     top: 20px;
