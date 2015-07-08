@@ -1,45 +1,74 @@
 /////////////////////////////////////////////////////////////////////////////
 //      
-//          TRI Dataset Visualization version 1.1
+//          TRI Dataset Visualization 
+//          version 1.2
+//
 //          Created by 
 //              David Burlinson
+//              Spring 2015 (v1.1)
+//
+//              Modified July 2015 (v1.2)
+//
+//                                             _
+//                                            | \
+//                                            | |
+//                                            | |
+//                       |\                   | |
+//                      /, ~\                / /
+//                     X     `-.....-------./ /
+//                      ~-. ~  ~              |
+//                         \             /    |
+//                          \  /_     ___\   /
+//                          | /\ ~~~~~   \ |
+//                          | | \        || |
+//                          | |\ \       || )
+//                         (_/ (_/      ((_/
+//
+//
+//
+//
 //
 /////////////////////////////////////////////////////////////////////////////       
     
-// Globals
-var scaleFactor = 1;
-var translate = [0,0];
-var nodeSize = 2;
-var strokeWidth = 0.5;
-var fac = null;
-var states = null;
-var stateLines = null;
-var prevColor = null;
-var brushing = false;
-var selectingState = false;
-var selectedState = null;
-var toolContext = "state";
+
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          P R O T O T Y P E S
+//
+/////////////////////////////////////////////////////////////////////////////
 
 //Move to front
 d3.selection.prototype.moveToFront = function() { 
     return this.each(function() { 
       this.parentNode.appendChild(this); 
     }); 
-  }; 
+}; 
 
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          G L O B A L S
+//
+/////////////////////////////////////////////////////////////////////////////
 
-var total = null;
-resetTotal();
-
-var width = window.innerWidth - 15,
+var scaleFactor = 1;                                                        // initial scale factor
+var translate = [0,0];                                                      // initial translation tuple
+var nodeSize = 2;                                                           // base radius size for facilities
+var strokeWidth = 0.5;                                                      // base stroke width for facilities
+var fac = null;                                                             // selection global for facilities
+var states = null;                                                          // selection global for states
+var stateLines = null;                                                      // size variable for stateLines
+var brushing = false;                                                       // is the user currently brushing (sentinel)
+var selectingState = false;                                                 // is the user currently selecting a state (sentinel)
+var selectedState = null;                                                   // selected state id
+var toolContext = "select";                                                 // context of interaction (select, brush)
+var total = null; resetTotal();                                             // create and initialize total 
+var width = window.innerWidth - 15,                                         // width and height values 
     height = window.innerHeight - 15,
     height1 = height - 200;
-    //active = d3.select(null);
+var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);       // X and Y scales for line chart
+var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);   //
 
-var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);
-var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);
-
-
+// Zoom behavior
 var zoom = d3.behavior.zoom()
     .scaleExtent([0.75,100])
     .x(x_scale)
@@ -50,7 +79,7 @@ var zoom = d3.behavior.zoom()
     zoom.scale(1)
     zoom.translate(translate);
 
-
+// Quadtree for facility mapping
 var quadtree = d3.geom.quadtree()
     .extent([[-1, -1], [width + 1, height1 + 1]])
     .x(function(d) {
@@ -60,38 +89,81 @@ var quadtree = d3.geom.quadtree()
         return d.y;
     });
 
+// Color scale for facilities
 var color = d3.scale.quantize()
     .range(colorbrewer.RdYlGn[9]);
 
+// ALBERSUSA projection function
 var projection = d3.geo.albersUsa()
     .scale(1500)
     .translate([width / 2, height1 / 2]);
 
+// Path global
 var path = d3.geo.path()
     .projection(projection);
 
-//var svg = d3.select("#container").append("svg")
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          T O O L T I P
+//
+/////////////////////////////////////////////////////////////////////////////
+
+
+var tooltip = d3.select('#tooltip')
+     .attr('class', 'popupMessage')
+     .style('opacity', 0);
+
+function popupTooltip(message) {
+    tooltip.text(message);
+    tooltip.transition().delay(50).style('opacity', 0.9).duration(300).transition().delay(1500).style('opacity', 0.0).duration(750);
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          L A Y E R S
+//
+/////////////////////////////////////////////////////////////////////////////
+
+// Parent SVG element
 var svg = d3.select("#map")
     .attr("class", "map")
     .attr("width", width)
     .attr("height", height1)
     .call(zoom);
 
-
+// MAP layer
 var usaLayer = svg.append("g")
     .style("stroke-width", "1.5px");
 
-
-   
+// Facility Layer
 var quadTreeLayer = svg.append("g")
     .style("stroke-width", "1.5px");
     
-
+// Background rectangle
 var backgroundRect = quadTreeLayer.append("rect")
     .attr("class", "background")
     .attr("width", width)
     .attr("height", height1)
     .on("click", clickedBackground);
+
+
+function clickedBackground() {
+//    console.log("clickedBackground");
+    clearState();
+};
+
+function reorderLayers() {
+    console.log("reorder layers");
+    //backgroundLayer.moveToFront();
+    usaLayer.moveToFront();
+    quadTreeLayer.moveToFront();
+    brushLayer.moveToFront();
+}
 
 
 
@@ -153,12 +225,15 @@ function zoomend() {
     }
 }
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 //      
 //          U S A
 //
 /////////////////////////////////////////////////////////////////////////////
-    ///TRI/project2/data/us.json
+    
+///TRI/project2/data/us.json
 d3.json("data/us.json", function(error, us) {
   states = usaLayer.selectAll("path")
       .data(topojson.feature(us, us.objects.states).features)
@@ -171,10 +246,10 @@ d3.json("data/us.json", function(error, us) {
       });
     
     //Counties
-//    usaLayer.insert("path", ".graticule")
-//      .datum(topojson.mesh(us, us.objects.counties, function(a, b) { return a !== b && !(a.id / 1000 ^ b.id / 1000); }))
-//      .attr("class", "countyMesh")
-//      .attr("d", path);
+    //    usaLayer.insert("path", ".graticule")
+    //      .datum(topojson.mesh(us, us.objects.counties, function(a, b) { return a !== b && !(a.id / 1000 ^ b.id / 1000); }))
+    //      .attr("class", "countyMesh")
+    //      .attr("d", path);
   
     stateLines = usaLayer.append("path")
       .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
@@ -184,6 +259,31 @@ d3.json("data/us.json", function(error, us) {
       
 });
 
+
+function clickedState(d) {
+    highlightState(d);
+}
+
+function highlightState(d) {
+    var thisState = d.id;
+    if(thisState == selectedState) {
+        states.classed("fade", false);
+        fac.classed("fade", function(d) { return false; });
+        selectedState = null;
+    } else { 
+        states.classed("fade", function(d) { return d.id != thisState;  });
+        fac.classed("fade", function(d) { return true; });
+        selectedState = thisState;
+    }
+}
+
+function clearState() {
+    selectedState = null;
+    selectingState = false;
+    states.classed("fade", false);
+    //console.log("clearing state");
+    fac.classed("fade", function(d) { return false; });
+}
 
 
     
@@ -286,6 +386,66 @@ function search(quadtree, x0, y0, x3, y3) {
   });
 }
 
+function hover(d) {
+    if(brushing)
+        return;
+
+    d3.select("#graph")
+            .style("opacity", 1);
+    
+    //Update position of dataView div
+    var dataDiv = d3.select("#dataView")
+        .style("left", function() {
+            if(d3.event.pageX >= width/2)
+                return d3.event.pageX-350 + "px"; 
+            else
+                return d3.event.pageX+50 + "px";
+        })
+        .style("top", d3.event.pageY - 25 + "px");
+    
+   //Style the selected facility
+    d3.select(this)
+        .classed("brushed", true);
+    
+    //Create line graph
+    lineGraph(d);
+ 
+    //Show data div
+    showData(dataDiv, d);
+}
+        
+function out() { 
+    d3.select(this)
+        .classed("brushed", false);
+
+    showData(null, null);
+    d3.select("#graph").selectAll("*").remove();
+    
+    d3.select("#key")
+        .style("opacity", 0);
+}
+
+function showData(facility, d) {
+    var dataView = d3.select("#dataView");
+    if(facility == null) {
+        dataView.style("opacity", "0");
+        //dataView.text("");
+    } else {  
+        dataView.style("opacity", ".95");
+        var info = "";
+        info += "Facility Name: " + d.facilityName + "<br />";
+        //info += "test: " + d.colorIndex + "<br />";
+        dataView.html(info);
+    }
+}
+    
+function clearFacilities() {
+    fac.each(function(d) { d.scanned = d.selected = false; });
+    fac.classed("brushed", function(d) { return d.selected; } );
+    
+    hideGraph();
+}
+
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -314,187 +474,6 @@ d3.select("#graph")
     .style("opacity", 0);
 d3.select("#key")
     .style("opacity", 0);
-/////////////////////////////////////////////////////////////////////////////
-//      
-//          L I N E   G R A P H
-//
-///////////////////////////////////////////////////////////////////////////// 
-
-function clickedBackground() {
-//    console.log("clickedBackground");
-    clearState();
-};
-
-function clearEffects() {
-    //console.log("clearEffects ");
-    
-    if(brush)
-        clearBrush();
-    
-    if(states)
-        clearState();
-    
-    d3.select("#graph") 
-        .style("opacity", 0);
-};
-
-function lineGraph(d) {
-    d3.select("#key")
-        .style("opacity", 1);
-    
-    var graph = d3.select("#graph")
-        //.attr("id", "graph")
-        .attr("width", width)
-        .attr("height", 200);
-        
-    graph.selectAll("*").remove();
-        
-    var xScale = d3.scale.linear().range([100, width-50]).domain([1986, 2013]),
-        
-    yScale = d3.scale.linear().range([200-25, 25]).domain(
-        [
-            Math.min(d3.min(d.releases), d3.min(d.recycling), d3.min(d.recovery), d3.min(d.treatment)),
-            Math.max(d3.max(d.releases), d3.max(d.recycling), d3.max(d.recovery), d3.max(d.treatment))
-        ]),
-                        
-    xAxis = d3.svg.axis()
-        .scale(xScale)
-        .tickFormat(d3.format("####")),
-                        
-    yAxis = d3.svg.axis()
-        .scale(yScale)
-        .orient("left");
-
-    graph.append("svg:g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + (200 - 25) + ")")
-        .call(xAxis);
-    graph.append("svg:g")
-        .attr("class", "y axis")
-        .attr("transform", "translate(" + (100) + ",0)")
-        .call(yAxis);
-    var lineGen = d3.svg.line()
-        .x(function(d,i) {
-            return xScale(i + 1986);
-        })
-        .y(function(d) {
-            return yScale(d);
-        })
-        .interpolate("linear");
-    
-    // Add a y-axis label.
-    graph.append("text")
-        .attr("class", "y label")
-        .attr("text-anchor", "end")
-        .attr("y", 6)
-        .attr("dy", ".75em")
-        .attr("transform", "rotate(-90)")
-        .text("Chemical Usage (lbs)");
-    
-    graph.append('svg:path')
-        .attr('d', lineGen(d.releases))
-        .attr('stroke', 'red')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none');
-    graph.append('svg:path')
-        .attr('d', lineGen(d.recycling))
-        .attr('stroke', 'green')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none');
-   graph.append('svg:path')
-        .attr('d', lineGen(d.treatment))
-        .attr('stroke', 'purple')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none');
-   graph.append('svg:path')
-        .attr('d', lineGen(d.recovery))
-        .attr('stroke', 'lightblue')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none');
-}
-    
-/////////////////////////////////////////////////////////////////////////////
-//      
-//          M E T H O D S
-//
-/////////////////////////////////////////////////////////////////////////////
-    
-function clickedState(d) {
-    highlightState(d);
-}
-
-function highlightState(d) {
-    var thisState = d.id;
-    if(thisState == selectedState) {
-        states.classed("fade", false);
-        fac.classed("fade", function(d) { return false; });
-        selectedState = null;
-    } else { 
-        states.classed("fade", function(d) { return d.id != thisState;  });
-        fac.classed("fade", function(d) { return true; });
-        selectedState = thisState;
-    }
-}
-
-function hover(d) {
-    if(brushing)
-        return;
-//    
-//    console.log(d3.select(this));
-//        
-    d3.select("#graph")
-            .style("opacity", 1);
-    
-    //Update position of dataView div
-    var dataDiv = d3.select("#dataView")
-        .style("left", function() {
-            if(d3.event.pageX >= width/2)
-                return d3.event.pageX-350 + "px"; 
-            else
-                return d3.event.pageX+50 + "px";
-        })
-        .style("top", d3.event.pageY - 25 + "px");
-    
-   //Style the selected facility
-    prevColor = d3.select(this).style("fill");
-    d3.select(this)
-        .classed("brushed", true);
-    
-    //Create line graph
-    lineGraph(d);
- 
-    //Show data div
-    showData(dataDiv, d);
-}
-        
-function out() { 
-    d3.select(this)
-        .classed("brushed", false);
-    
-    prevColor = null;
-    showData(null, null);
-    d3.select("#graph").selectAll("*").remove();
-    
-    d3.select("#key")
-        .style("opacity", 0);
-}
-
-function showData(facility, d) {
-    var dataView = d3.select("#dataView");
-    if(facility == null) {
-        dataView.style("opacity", "0");
-        //dataView.text("");
-    } else {  
-        dataView.style("opacity", ".95");
-        var info = "";
-        info += "Facility Name: " + d.facilityName + "<br />";
-        //info += "test: " + d.colorIndex + "<br />";
-        dataView.html(info);
-    }
-}
-    
-var quadTreeLayer = svg.append("g")
-    .style("stroke-width", "1.5px");
 
 function brushstart() {
 //    console.log("brushstart");
@@ -574,30 +553,89 @@ function clearBrush() {
     hideGraph();
 }
 
-function clearFacilities() {
-    fac.each(function(d) { d.scanned = d.selected = false; });
-    fac.classed("brushed", function(d) { return d.selected; } );
-    
-    hideGraph();
-}
 
-function hideGraph() {
-//    console.log("hidegraph");
-    d3.select("#graph") 
-        .style("opacity", 0);
+
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          L I N E   G R A P H
+//
+///////////////////////////////////////////////////////////////////////////// 
+
+function lineGraph(d) {
     d3.select("#key")
-        .style("opacity", 0);
+        .style("opacity", 1);
+    
+    var graph = d3.select("#graph")
+        //.attr("id", "graph")
+        .attr("width", width)
+        .attr("height", 200);
+        
+    graph.selectAll("*").remove();
+        
+    var xScale = d3.scale.linear().range([100, width-50]).domain([1986, 2013]),
+        
+    yScale = d3.scale.linear().range([200-25, 25]).domain(
+        [
+            Math.min(d3.min(d.releases), d3.min(d.recycling), d3.min(d.recovery), d3.min(d.treatment)),
+            Math.max(d3.max(d.releases), d3.max(d.recycling), d3.max(d.recovery), d3.max(d.treatment))
+        ]),
+                        
+    xAxis = d3.svg.axis()
+        .scale(xScale)
+        .tickFormat(d3.format("####")),
+                        
+    yAxis = d3.svg.axis()
+        .scale(yScale)
+        .orient("left");
+
+    graph.append("svg:g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + (200 - 25) + ")")
+        .call(xAxis);
+    graph.append("svg:g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + (100) + ",0)")
+        .call(yAxis);
+    var lineGen = d3.svg.line()
+        .x(function(d,i) {
+            return xScale(i + 1986);
+        })
+        .y(function(d) {
+            return yScale(d);
+        })
+        .interpolate("linear");
+    
+    // Add a y-axis label.
+    graph.append("text")
+        .attr("class", "y label")
+        .attr("text-anchor", "end")
+        .attr("y", 6)
+        .attr("dy", ".75em")
+        .attr("transform", "rotate(-90)")
+        .text("Chemical Usage (lbs)");
+    
+    graph.append('svg:path')
+        .attr('d', lineGen(d.releases))
+        .attr('stroke', 'red')
+        .attr('stroke-width', 3)
+        .attr('fill', 'none');
+    graph.append('svg:path')
+        .attr('d', lineGen(d.recycling))
+        .attr('stroke', 'green')
+        .attr('stroke-width', 3)
+        .attr('fill', 'none');
+   graph.append('svg:path')
+        .attr('d', lineGen(d.treatment))
+        .attr('stroke', 'purple')
+        .attr('stroke-width', 3)
+        .attr('fill', 'none');
+   graph.append('svg:path')
+        .attr('d', lineGen(d.recovery))
+        .attr('stroke', 'lightblue')
+        .attr('stroke-width', 3)
+        .attr('fill', 'none');
 }
-
-function clearState() {
-    selectedState = null;
-    selectingState = false;
-    states.classed("fade", false);
-    //console.log("clearing state");
-    fac.classed("fade", function(d) { return false; });
-}
-
-
+    
 function resetTotal() {
     total = {
         "releases":     [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0], 
@@ -608,32 +646,34 @@ function resetTotal() {
     }
 }
 
-
-
-
-
-var tooltip = d3.select('#tooltip')
-     .attr('class', 'popupMessage')
-     .style('opacity', 0);
-
-function popupTooltip(message) {
-    tooltip.text(message);
-    tooltip.transition().delay(50).style('opacity', 0.9).duration(300).transition().delay(1500).style('opacity', 0.0).duration(750);
-}
-
-function reorderLayers() {
-    console.log("reorder layers");
-    //backgroundLayer.moveToFront();
-    usaLayer.moveToFront();
-    quadTreeLayer.moveToFront();
-    brushLayer.moveToFront();
+function hideGraph() {
+//    console.log("hidegraph");
+    d3.select("#graph") 
+        .style("opacity", 0);
+    d3.select("#key")
+        .style("opacity", 0);
 }
 
 
 
 
-
-
+/////////////////////////////////////////////////////////////////////////////
+//      
+//          U T I L I T Y   M E T H O D S
+//
+/////////////////////////////////////////////////////////////////////////////
+    
+function clearEffects() {
+    //console.log("clearEffects ");
+    if(brush)
+        clearBrush();
+    
+    if(states)
+        clearState();
+    
+    d3.select("#graph") 
+        .style("opacity", 0);
+};
 
 
 
@@ -642,6 +682,14 @@ function reorderLayers() {
 //              I N I T   F U N C T I O N S
 //
 ////////////////////////////////////////////////////////////
+
+function init() {
+//    console.log("init!");
+    bindKeys();
+    
+    usaLayer.moveToFront();
+}
+
 
 
 function bindKeys() {
@@ -667,12 +715,12 @@ function bindKeys() {
         // ONE
         if ( d3.event.keyCode === 49 ) {
 //            console.log("ONE");   
-            popupTooltip("state");
+            popupTooltip("select");
             clearEffects();
             usaLayer.moveToFront();
             quadTreeLayer.moveToFront();
             backgroundRect.moveToFront();
-            toolContext = "state";
+            toolContext = "select";
         }
         // TWO
         if ( d3.event.keyCode === 50 ) {
@@ -698,27 +746,30 @@ function bindKeys() {
 
 ////////////////////////////////////////////////////////////
 //
-//              I N I T   
+//                      M A I N   
+//        
+//
+//                _                        
+//                \`*-.                    
+//                 )  _`-.                 
+//                .  : `. .                
+//                : _   '  \               
+//                ; *` _.   `*-._          
+//                `-.-'          `-.       
+//                  ;       `       `.     
+//                  :.       .        \    
+//                  . \  .   :   .-'   .   
+//                  '  `+.;  ;  '      :   
+//                  :  '  |    ;       ;-. 
+//                  ; '   : :`-:     _.`* ;
+//               .*' /  .*' ; .*`- +'  `*' 
+//               `*-*   `*-*  `*-*'        
+//
 //
 ////////////////////////////////////////////////////////////
 
-function init() {
-    console.log("init!");
-    bindKeys();
-    
-    usaLayer.moveToFront();
-    quadTreeLayer.moveToFront();
-}
-
-
-////////////////////////////////////////////////////////////
-//
-//              M A I N   
-//
-////////////////////////////////////////////////////////////
 (function main() {
-    console.log("main!"); 
-    
+//    console.log("main!"); 
     
     init(); 
 })();
