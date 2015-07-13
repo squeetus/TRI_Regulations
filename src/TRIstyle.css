@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////
 //
-//          Stylesheet for TRI data 
+//          Stylesheet for TRI data
 //          Authors:
 //              David Burlinson
 //
@@ -20,7 +20,7 @@ body, html {
 }
 
 h1 {
- opacity: 0.6;   
+ opacity: 0.6;
 }
 
 .background {
@@ -37,28 +37,28 @@ h1 {
 
 .info1 {
   min-width: 100%;
-  position: absolute; 
+  position: absolute;
   bottom: 0;
 }
 
-.info2 {    
+.info2 {
   top:33%;
   min-width: 100%;
-  position: absolute; 
+  position: absolute;
   bottom: 0;
 }
 
 .info3 {
   top: 66%;
   min-width: 100%;
-  position: absolute; 
+  position: absolute;
   bottom: 0;
 }
-    
+
 .feature {
   fill: tan;
   //cursor: pointer;
-  
+
 }
 
 .feature.active {
@@ -71,7 +71,7 @@ h1 {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-    
+
 .countyMesh {
   fill: none;
   stroke: #DDDDDD;
@@ -81,7 +81,7 @@ h1 {
   stroke-dasharray: 2,1;
 }
 
-#container { 
+#container {
     height:100vh;
     background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);
 }
@@ -103,15 +103,15 @@ h1 {
     background-color: lightslategrey;
     opacity: 0;
     pointer-events: none;
-}    
-    
+}
+
 #pCoord {
     position: absolute;
     left: 50px;
     width: 85%;
     height: 175px;
 }
-    
+
 #graph {
 /*background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);*/
 }
@@ -123,23 +123,62 @@ h1 {
 }
 
 .listEle {
-    fill: lightskyblue;  
+    fill: lightskyblue;
     border-top-left-radius: 8px;
     border-bottom-left-radius: 8px;
 }
 
 .listEleCurr {
     stroke-width: 1.5px;
-    stroke: black; 
+    stroke: black;
 }
 
 #key {
     position: absolute;
     top: 1000;
-    left: 500px;
+    left: 400px;
     opacity: 0;
-}   
-    
+    width: 600px;
+}
+
+.keyElement {
+    display: block;
+    width: 120px;
+    float: left;
+    vertical-align: middle;
+}
+
+.keyElementText {
+    padding-left: 5px;
+    float: left;
+}
+
+.keyButton {
+    background-color: black;
+    border-radius: 2px;
+    color: black;
+    width: 1vw;
+    height: 1vw;
+    float:left;
+}
+
+div.deselected {
+    opacity: .3;
+}
+
+.deselected {
+    opacity: 0;
+}
+
+div.no_selection {
+    -webkit-user-select: none; /* webkit (safari, chrome) browsers */
+    -moz-user-select: none; /* mozilla browsers */
+    -khtml-user-select: none; /* webkit (konqueror) browsers */
+    -ms-user-select: none; /* IE10+ */
+}
+
+
+
 .popupMessage {
     background-color: lightskyblue;
     width: 100px;
@@ -154,7 +193,7 @@ h1 {
     line-height:30px;
     text-align: center;
     font-family: "Helvetica Neue", Helvetica;
-    
+
 }
 
 #title {
@@ -163,7 +202,7 @@ h1 {
     text-align: center;
     pointer-events: none;
 }
-    
+
 .brush .extent {
   fill-opacity: .1;
   stroke: #fff;
@@ -180,11 +219,11 @@ h1 {
 }
 
 .facility.fade {
-    opacity: 0.1;   
+    opacity: 0.1;
 }
 
 .facility {
-    stroke: black;  
+    stroke: black;
 }
 
 .facility.scanned {

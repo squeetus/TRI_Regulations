@@ -6,34 +6,46 @@
 
 <body>
 <div id="container">
-    
+
     <div id="title"><h1>Toxics Release Inventory</h1></div>
-    
-    
-    
+
+
+
     <div id="dataView">
     </div>
-    
+
     <div id="tooltip">
     </div>
-    
-    
-    
+
+
+
     <svg id="map"></svg>
-    
-    
-    
-    <div id="key">
-        <span style="color: red; display: inline-block; width: 100px">Releases</span>
-        <span style="color: green; display: inline-block; width: 100px">Recycling</span>
-        <span style="color: purple; display: inline-block; width: 100px">Treatment</span>
-        <span style="color: lightblue; display: inline-block; width: 100px">Recovery</span>
+
+
+
+    <div id="key" class="no_selection">
+        <div class="keyElement">
+            <div class="keyButton" id="keyReleases"></div>
+            <span class="keyElementText" style="color: red;">Releases</span>
+        </div>
+        <div class="keyElement">
+            <div class="keyButton" id="keyRecycling"></div>
+            <span class="keyElementText" style="color: green;">Recycling</span>
+        </div>
+        <div class="keyElement">
+            <div class="keyButton" id="keyTreatment"></div>
+            <span class="keyElementText" style="color: purple;">Treatment</span></div>
+        <div class="keyElement">
+            <div class="keyButton" id="keyRecovery"></div>
+            <span class="keyElementText" style="color: blue;">Recovery</span>
+        </div>
     </div>
+
     <svg id="stack"></svg>
     <svg id="graph"></svg>
-    
-    
-    
+
+
+
     <script src="resources/colorbrewer.js"></script>
     <script src="resources/d3.v3.min.js"></script>
     <script src="resources/topojson.v1.min.js"></script>
