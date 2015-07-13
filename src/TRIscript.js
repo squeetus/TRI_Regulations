@@ -31,6 +31,8 @@
 /////////////////////////////////////////////////////////////////////////////       
     
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 //      
 //          P R O T O T Y P E S
@@ -43,6 +45,8 @@ d3.selection.prototype.moveToFront = function() {
       this.parentNode.appendChild(this); 
     }); 
 }; 
+
+function Queue(){var a=[],b=0;this.getLength=function(){return a.length-b};this.isEmpty=function(){return 0==a.length};this.enqueue=function(b){a.push(b)};this.dequeue=function(){if(0!=a.length){var c=a[b];2*++b>=a.length&&(a=a.slice(b),b=0);return c}};this.peek=function(){return 0<a.length?a[b]:void 0}};
 
 /////////////////////////////////////////////////////////////////////////////
 //      
@@ -69,7 +73,35 @@ var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);       // X
 var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);   //
 
 var compareStack = [];
-compareStack.push(copyTotal());
+var compareQueue = new Queue();
+var compareList = {
+    "data": [],
+    "add": function(stuff) {
+        if(this.length < 10) {
+            this.data[this.length] = stuff;
+            this.length++;
+            this.pos = ((this.length - 1) >= 0) ? this.length - 1 : 0;
+        } else {
+            this.length = 1;
+            this.pos = 0;
+            this.data[0] = stuff;
+            this.length++;
+        }
+        updateList();
+    },
+    "reset": function() {
+        this.data = [];
+        this.length = 0;
+        this.pos = 0;
+        updateList();
+    },
+    "length": 0, 
+    "pos": 0
+};
+
+//compareQueue.enqueue({"data": total});
+//console.log(compareQueue);
+//compareStack.push(copyTotal());
 
 // Zoom behavior
 var zoom = d3.behavior.zoom()
@@ -157,6 +189,9 @@ var backgroundRect = quadTreeLayer.append("rect")
 
 function clickedBackground() {
 //    console.log("clickedBackground");
+    resetTotal();
+    lineGraph(total);
+    clearFacilities();
     clearState();
 };
 
@@ -282,6 +317,7 @@ d3.json("data/us.json", function(error, us) {
 function clickedState(d) {
     highlightState(d);
     
+    
     // SCALE TO BOUNDING BOX? 
 //     var bounds = path.bounds(d),
 //      dx = bounds[1][0] - bounds[0][0],
@@ -300,14 +336,29 @@ function clickedState(d) {
 
 function highlightState(d) {
     var thisState = d.id;
+    
+    
     if(thisState == selectedState) {
+        resetTotal();
         states.classed("fade", false);
-        fac.classed("fade", function(d) { return false; });
+        fac.classed("fade", function(d) { d.state == thisState ? false : true; });
+        fac.classed("selected", function(d) { d.state == thisState ?  true : false; });
+        fac.each(function(d, i) { if(d.state == thisState) {removeFacilityFromTotal(d, i); } });
+        //lineGraph(total);
+        hideGraph();
+        
         selectedState = null;
     } else { 
+        resetTotal();
+        selectedState = thisState;
+        
         states.classed("fade", function(d) { return d.id != thisState;  });
         fac.classed("fade", function(d) { return d.state != thisState; });
-        selectedState = thisState;
+        fac.classed("selected", function(d) { return d.state == thisState; });
+        fac.each(function(d, i) { if(d.state == thisState) {addFacilityToTotal(d, i); } });
+        lineGraph(total);
+        compareList.add(copyTotal());
+        updateList();
     }
 }
 
@@ -333,7 +384,9 @@ function clearState() {
 //    .style("stroke-width", "1.5px");
 
 d3.json("data/facilities.json", function(error, f) {
-    //console.log(error);
+    if(error)
+        console.log(error);
+
     var arr = [];
     var x, y;
     var domain = [];
@@ -392,7 +445,8 @@ d3.json("data/facilities.json", function(error, f) {
         .attr("cy", function(d) { return d.y; })
         .attr("r", nodeSize)
         .attr("stroke-width", strokeWidth)
-        .attr("id", function(d) {return "f" + d.facilityName;})
+        //.attr("id", function(d) {return "f" + d.facilityName;})
+        .each(function(d) { d.id = "f" + d.facilityName; })
         .on("mouseover", hover)
         .on("mouseout", out)
         .call(zoom);
@@ -421,7 +475,7 @@ function search(quadtree, x0, y0, x3, y3) {
 }
 
 function hover(d) {
-    if(brushing)
+    if(brushing || selectedState)
         return;
 
     d3.select("#graph")
@@ -442,13 +496,20 @@ function hover(d) {
         .classed("brushed", true);
     
     //Create line graph
-    lineGraph(d);
+    resetTotal();
+    addFacilityToTotal(d,0);
+    lineGraph(total);
+    compareList.add(copyTotal());
+    updateList();
  
     //Show data div
     showData(dataDiv, d);
 }
         
 function out() { 
+    if(selectedState)
+        return;
+    
     d3.select(this)
         .classed("brushed", false);
 
@@ -476,6 +537,7 @@ function showData(facility, d) {
 function clearFacilities() {
     fac.each(function(d) { d.scanned = d.selected = false; });
     fac.classed("brushed", function(d) { return d.selected; } );
+    fac.classed("selected", false);
     fac.classed("fade", false );
     
     hideGraph();
@@ -542,6 +604,7 @@ function brushend() {
     search(quadtree, extent[0][0], extent[0][1], extent[1][0], extent[1][1]);
     fac.classed("brushed", function(d) { return d.selected; });
     fac.classed("fade", function(d) { return !d.selected; });
+    resetTotal();
     fac.each(function(d, i) {
         if(!d.selected && total.contains.indexOf(i) >= 0) {
             total.contains.splice(total.contains.indexOf(i), 1);
@@ -568,9 +631,10 @@ function brushend() {
         resetTotal();
     }
     
-    compareStack.push(copyTotal());
-    updateStack();
+    
     lineGraph(total);
+    compareList.add(copyTotal());
+    updateList();
     //console.log("brushend");
     brushing = false;
     brush.clear();
@@ -610,7 +674,8 @@ function lineGraph(d) {
         //.attr("id", "graph")
         .attr("x", 150)
         .attr("width", width-100)
-        .attr("height", 200);
+        .attr("height", 200)
+        .attr("opacity", 1);
         
     graph.selectAll("*").remove();
         
@@ -680,6 +745,11 @@ function lineGraph(d) {
         .attr('stroke', 'lightblue')
         .attr('stroke-width', 3)
         .attr('fill', 'none');
+    
+    showGraph();
+    //compareList.add(copyTotal());
+//    compareStack.push(copyTotal());
+//    updateList();
 }
     
 function resetTotal() {
@@ -690,6 +760,42 @@ function resetTotal() {
         "recovery":     [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
         "contains":     [] 
     }
+
+}
+
+function addFacilityToTotal(d, i) {
+    if(total.contains.indexOf(i) >= 0) {
+            total.contains.splice(total.contains.indexOf(i), 1);
+            for(var j = 0; j < 27; j++) {
+                total.releases[j] -= d.releases[j];
+                total.recycling[j] -= d.recycling[j];
+                total.treatment[j] -= d.treatment[j];
+                total.recovery[j] -= d.recovery[j];
+            }
+        }
+        
+   if(total.contains.indexOf(i) < 0) {
+        total.contains.push(i);
+        for(var i = 0; i < 27; i++) {
+            total.releases[i] += d.releases[i];
+            total.recycling[i] += d.recycling[i];
+            total.treatment[i] += d.treatment[i];
+            total.recovery[i] += d.recovery[i];
+        }
+   }  
+}
+
+function removeFacilityFromTotal(d, i) {
+    if(total.contains.indexOf(i) >= 0) {
+            total.contains.splice(total.contains.indexOf(d.id), 1);
+            for(var j = 0; j < 27; j++) {
+                total.releases[j] -= d.releases[j];
+                total.recycling[j] -= d.recycling[j];
+                total.treatment[j] -= d.treatment[j];
+                total.recovery[j] -= d.recovery[j];
+            }
+        }
+    
 }
 
 function copyTotal() {
@@ -729,33 +835,41 @@ function showGraph() {
 
 var stackLayer = d3.select("#stack").append("g");
 
-function updateStack() {
-    var stackContents = stackLayer.selectAll("rect")
-      .data(compareStack);
+function updateList() {
+    var listContents = stackLayer.selectAll("rect")
+      .data(compareList.data)
+        .classed("listEleCurr", function(d, i) { return i == compareList.pos; })
     
-    stackContents.enter().append("rect")
+    listContents.enter().append("rect")
         .attr("opacity", 0)
         .attr("x", 5)
         .attr("y", function(d, i) { return 180 - (12 * i); })
         .attr("width", "30px")
         .attr("height", "10px")
-        .classed("stackEle", true)
+        .classed("listEle", true)
+        //
         .attr("id", function(d, i) { return i; })
         .on("click", function(d, i) {
 //            console.log(i, compareStack[i]);
-            lineGraph(compareStack[i]);
-            showGraph();
+            lineGraph(compareList.data[i]);
         });
     
-    stackContents.transition().duration(3500)
+    listContents.transition().duration(2000)
         .attr("opacity", 1);
     
-    stackContents.exit().transition().duration(2500).attr("opacity", 0).remove();
+    listContents.exit().transition().duration(1500).attr("opacity", 0).remove();
 }
 
-function clearStack() {
-    compareStack = [];
-    updateStack();
+//function clearStack() {
+//    compareStack = [];
+//    updateStack();
+//}
+
+function clearList() {
+    stackLayer.selectAll("*").remove();
+    compareList.reset();
+ 
+    updateList();
 }
 
 
@@ -789,7 +903,8 @@ function clearEffects() {
 function init() {
 //    console.log("init!");
     bindKeys();
-    updateStack();
+//    updateStack();
+    updateList();
     
     usaLayer.moveToFront();
     
@@ -850,9 +965,10 @@ function bindKeys() {
         }
         // FOUR
         if ( d3.event.keyCode === 52) {
-            clearStack();
+//            clearStack();
+            clearList();
             hideGraph();
-            popupTooltip("clear stack");
+            popupTooltip("clear list");
             
         }
         

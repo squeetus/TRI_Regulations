@@ -122,10 +122,15 @@ h1 {
     height: 200px;
 }
 
-.stackEle {
+.listEle {
     fill: lightskyblue;  
     border-top-left-radius: 8px;
     border-bottom-left-radius: 8px;
+}
+
+.listEleCurr {
+    stroke-width: 1.5px;
+    stroke: black; 
 }
 
 #key {
@@ -189,7 +194,7 @@ h1 {
 }
 
 .facility.selected {
-  fill: red;
+  fill: white;
   fill-opacity: 1;
 }
 
