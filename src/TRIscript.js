@@ -105,17 +105,24 @@ releasesLine = recoveryLine = treatmentLine = recyclingLine = null;
 
 //var compareStack = [];
 //var compareQueue = new Queue();
+function comparison(name, type, data, collection) {
+    this.title = name || "name";
+    this.type = type || "type";
+    this.data = data || [];
+    this.collection = collection || [];
+}
+
 var compareList = {
     "data": [],
-    "add": function(stuff) {
+    "add": function(comparison) {
         if(this.length < 10) {
-            this.data[this.length] = stuff;
+            this.data[this.length] = comparison;
             this.length++;
             this.pos = ((this.length - 1) >= 0) ? this.length - 1 : 0;
         } else {
             this.length = 1;
             this.pos = 0;
-            this.data[0] = stuff;
+            this.data[0] = comparison;
             this.length++;
         }
         updateList();
@@ -224,6 +231,8 @@ function clickedBackground() {
     lineGraph(total);
     clearFacilities();
     clearState();
+
+    hideGraph();
 };
 
 function reorderLayers() {
@@ -397,7 +406,7 @@ function highlightState(d) {
         fac.classed("selected", function(d) { return d.state == thisState; });
         fac.each(function(d, i) { if(d.state == thisState) {addFacilityToTotal(d, i); } });
         lineGraph(total);
-        compareList.add(copyTotal());
+        compareList.add(new comparison( thisState, "states", copyTotal(), selectedStates.array));
         updateList();
     }
 }
@@ -431,7 +440,7 @@ function addState(d) {
           fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
           fac.each(function(d, i) { if(d.state == thisState) { removeFacilityFromTotal(d, i); } });
           lineGraph(total);
-          compareList.add(copyTotal());
+          compareList.add(new comparison( "multiple states", "states", copyTotal(), selectedStates.array));
           updateList();
 
         }
@@ -447,13 +456,20 @@ function addState(d) {
         fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
         fac.each(function(d, i) { if(d.state == thisState) { addFacilityToTotal(d, i); } });
         lineGraph(total);
-        compareList.add(copyTotal());
+        compareList.add(new comparison("multiple states", "states", copyTotal(), selectedStates.array));
         updateList();
     }
 }
 
+function highlightStates(arr) {
+    states.classed("fade", function(d) { if(arr.indexOf(d.id) >= 0) return false; else return true; });
+    fac.classed("fade", function(d) { if(arr.indexOf(d.state) >= 0) return false; else return true; });
+    fac.classed("selected", function(d) { if(arr.indexOf(d.state) >= 0) return true; else return false; });
+}
+
 function clearState() {
     selectedState = null;
+    selectedStates.clear();
     selectingState = false;
     states.classed("fade", false);
     //console.log("clearing state");
@@ -535,8 +551,9 @@ d3.json("data/facilities.json", function(error, f) {
         .attr("cy", function(d) { return d.y; })
         .attr("r", nodeSize)
         .attr("stroke-width", strokeWidth)
-        //.attr("id", function(d) {return "f" + d.facilityName;})
-        .each(function(d) { d.id = "f" + d.facilityName; })
+        .attr("id", function(d, i) {return "f" + i;})
+        //.each(function(d) { d.id = "f" + d.facilityName; })
+        .each(function(d, i) { d.id = "f" + i; })
         .on("mouseover", hover)
         .on("mouseout", out)
         .call(zoom);
@@ -589,7 +606,7 @@ function hover(d) {
     resetTotal();
     addFacilityToTotal(d,0);
     lineGraph(total);
-    compareList.add(copyTotal());
+    compareList.add(new comparison(d.facilityName, "facility", copyTotal(), d.id));
     updateList();
 
     //Show data div
@@ -630,7 +647,7 @@ function clearFacilities() {
     fac.classed("selected", false);
     fac.classed("fade", false );
 
-    hideGraph();
+    //hideGraph();
 }
 
 
@@ -717,13 +734,17 @@ function brushend() {
        }
     });
 
+    var brushedFac = fac.filter(function(d,i){
+      return d.selected;
+    });
+
     if(total.contains.length < 1) {
         resetTotal();
     }
 
 
     lineGraph(total);
-    compareList.add(copyTotal());
+    compareList.add(new comparison( "Brushed Region", "brush", copyTotal(), brushedFac));
     updateList();
     //console.log("brushend");
     brushing = false;
@@ -743,7 +764,7 @@ function clearBrush() {
 //    fac.classed("fade", function(d) { return !d.selected; } );
     fac.classed("brushed", function(d) { return d.selected; } );
 
-    hideGraph();
+    //hideGraph();
 }
 
 
@@ -767,12 +788,32 @@ keySelected = {
       "value": true},
     "4": {"name": "Recovery",
       "value": true},
+    "reset": resetKey
 }
 
 d3.select("#keyReleases").on("click", function() { updateKey(1); });
 d3.select("#keyRecycling").on("click", function() { updateKey(2); });
 d3.select("#keyTreatment").on("click", function() { updateKey(3); });
 d3.select("#keyRecovery").on("click", function() { updateKey(4); });
+
+function resetKey() {
+    keySelected[1].value = true;
+    keySelected[2].value = true;
+    keySelected[3].value = true;
+    keySelected[4].value = true;
+
+    d3.select("#key" + keySelected[1].name).classed("deselected", false);
+    d3.select("#key" + keySelected[2].name).classed("deselected", false);
+    d3.select("#key" + keySelected[3].name).classed("deselected", false);
+    d3.select("#key" + keySelected[4].name).classed("deselected", false);
+
+    if(releasesLine) {
+      releasesLine.classed("deselected", false);
+      recyclingLine.classed("deselected", false);
+      treatmentLine.classed("deselected", false);
+      recoveryLine.classed("deselected", false);
+    }
+}
 
 function updateKey(id) {
 
@@ -998,14 +1039,14 @@ function showGraph() {
 
 /////////////////////////////////////////////////////////////////////////////
 //
-//          S T A C K
+//          L I S T
 //
 /////////////////////////////////////////////////////////////////////////////
 
-var stackLayer = d3.select("#stack").append("g");
+var listLayer = d3.select("#list").append("g");
 
 function updateList() {
-    var listContents = stackLayer.selectAll("rect")
+    var listContents = listLayer.selectAll("rect")
       .data(compareList.data)
         .classed("listEleCurr", function(d, i) { return i == compareList.pos; })
 
@@ -1019,8 +1060,14 @@ function updateList() {
         //
         .attr("id", function(d, i) { return i; })
         .on("click", function(d, i) {
-//            console.log(i, compareStack[i]);
-            lineGraph(compareList.data[i]);
+            lineGraph(d.data);
+            reSelect(d);
+        })
+        .on("mouseover", function(d) {
+            hoverList(d);
+        })
+        .on("mouseout", function() {
+            hoverList(null);
         });
 
     listContents.transition().duration(2000)
@@ -1029,13 +1076,43 @@ function updateList() {
     listContents.exit().transition().duration(1500).attr("opacity", 0).remove();
 }
 
-//function clearStack() {
-//    compareStack = [];
-//    updateStack();
-//}
+function hoverList(d) {
+
+      //Update position of listView tooltip div
+      var listView = d3.select("#listView")
+          .style("left", d3.event.pageX+25 + "px")
+          .style("top", d3.event.pageY-25 + "px");
+
+      if(!d) {
+          listView.style("opacity", "0");
+      } else {
+          listView.style("opacity", ".95");
+          var info = "";
+          info += d.type + ": " + d.title + "<br />";
+          //info += "test: " + d.colorIndex + "<br />";
+          listView.html(info);
+      }
+}
+
+function reSelect(d) {
+    clearEffects();
+
+    switch(d.type) {
+        case "states":
+          highlightStates(d.collection);
+          selectedStates.array = d.collection;
+          break;
+        case "facility":
+          d3.select("#"+d.collection).classed("facility selected", true);
+          break;
+        case "brush":
+          d.collection.classed("facility selected", true);
+          break;
+    }
+}
 
 function clearList() {
-    stackLayer.selectAll("*").remove();
+    listLayer.selectAll("*").remove();
     compareList.reset();
 
     updateList();
@@ -1057,8 +1134,12 @@ function clearEffects() {
     if(states)
         clearState();
 
-    d3.select("#graph")
-        .style("opacity", 0);
+    if(fac)
+      clearFacilities();
+
+    keySelected.reset();
+    // d3.select("#graph")
+    //     .style("opacity", 0);
 };
 
 
@@ -1089,8 +1170,10 @@ function bindKeys() {
 
             clearBrush();
             clearState();
-            d3.select("#graph")
-                .style("opacity", 0);
+            clearFacilities();
+            hideGraph();
+
+            keySelected.reset();
 
 //            usaLayer.transition()
 //              .duration(750)
