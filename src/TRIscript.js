@@ -64,6 +64,34 @@ var stateLines = null;                                                      // s
 var brushing = false;                                                       // is the user currently brushing (sentinel)
 var selectingState = false;                                                 // is the user currently selecting a state (sentinel)
 var selectedState = null;                                                   // selected state id
+var selectedStates = {                                                      // selected state ids (for multiple select)
+    "array": [],
+    "remove": function (item){
+        for(var i in this.array){
+            if(this.array[i]==item){
+                this.array.splice(i,1);
+                break;
+                }
+        }
+    },
+    "add": function (item) {
+        this.array.push(item);
+    },
+    "contains": function (item) {
+        for(var i in this.array){
+          if(this.array[i] == item)
+            return true;
+        }
+        return false;
+    },
+    "empty": function () {
+        return this.array.length == 0 ? true : false;
+    },
+    "clear": function () {
+        this.array = [];
+    }
+};
+
 var toolContext = "select";                                                 // context of interaction (select, brush)
 var total = null; resetTotal();                                             // create and initialize total
 var width = window.innerWidth - 15,                                         // width and height values
@@ -318,7 +346,10 @@ d3.json("data/us.json", function(error, us) {
 
 
 function clickedState(d) {
-    highlightState(d);
+    if(event.shiftKey)
+      addState(d);
+    else
+      highlightState(d);
 
 
     // SCALE TO BOUNDING BOX?
@@ -340,6 +371,7 @@ function clickedState(d) {
 function highlightState(d) {
     var thisState = d.id;
 
+    selectedStates.clear();
 
     if(thisState == selectedState) {
         resetTotal();
@@ -351,14 +383,69 @@ function highlightState(d) {
         hideGraph();
 
         selectedState = null;
+        selectedStates.remove(thisState);
+        // console.log(selectedStates.array);
+
     } else {
         resetTotal();
         selectedState = thisState;
+        selectedStates.add(thisState)
+        // console.log(selectedStates.array);
 
         states.classed("fade", function(d) { return d.id != thisState;  });
         fac.classed("fade", function(d) { return d.state != thisState; });
         fac.classed("selected", function(d) { return d.state == thisState; });
         fac.each(function(d, i) { if(d.state == thisState) {addFacilityToTotal(d, i); } });
+        lineGraph(total);
+        compareList.add(copyTotal());
+        updateList();
+    }
+}
+
+function addState(d) {
+  //console.log("adding state");
+    var thisState = d.id;
+
+    if(selectedStates.contains(thisState)) {
+        // console.log("already selected: ", selectedStates.array);
+
+        selectedStates.remove(thisState);
+        // console.log("removing...", thisState, selectedStates.array);
+
+        //Last value in selectedStates
+        if(selectedStates.array.length <= 0) {
+          // console.log("LAST STATE, NO FADE");
+          states.classed("fade", false);
+          fac.classed("fade", false);
+          fac.classed("selected", false);
+          selectedState = null;
+          resetTotal();
+          hideGraph();
+        // Still some selected states...
+        } else {
+          // console.log("STILL STATES..", selectedStates.array);
+          states.classed("fade", function(d) { return !selectedStates.contains(d.id); });
+          // fac.classed("fade", function(d) { selectedStates.contains(d.state) ? false : true; });
+          // fac.classed("selected", function(d) { selectedStates.contains(d.state) ?  true : false; });
+          fac.classed("fade", function(d) { return !selectedStates.contains(d.state); });
+          fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
+          fac.each(function(d, i) { if(d.state == thisState) { removeFacilityFromTotal(d, i); } });
+          lineGraph(total);
+          compareList.add(copyTotal());
+          updateList();
+
+        }
+
+    } else {
+        //console.log("not selected: ", selectedStates.array);
+        // resetTotal();
+        selectedStates.add(thisState);
+        // console.log("adding.. ", thisState, selectedStates.array);
+
+        states.classed("fade", function(d) { return !selectedStates.contains(d.id);  });
+        fac.classed("fade", function(d) { return !selectedStates.contains(d.state); });
+        fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
+        fac.each(function(d, i) { if(d.state == thisState) { addFacilityToTotal(d, i); } });
         lineGraph(total);
         compareList.add(copyTotal());
         updateList();
@@ -478,7 +565,7 @@ function search(quadtree, x0, y0, x3, y3) {
 }
 
 function hover(d) {
-    if(brushing || selectedState)
+    if(brushing || selectedState || !selectedStates.empty())
         return;
 
     d3.select("#graph")
@@ -510,7 +597,7 @@ function hover(d) {
 }
 
 function out() {
-    if(selectedState)
+    if(selectedState || !selectedStates.empty())
         return;
 
     d3.select(this)
@@ -868,7 +955,8 @@ function addFacilityToTotal(d, i) {
 
 function removeFacilityFromTotal(d, i) {
     if(total.contains.indexOf(i) >= 0) {
-            total.contains.splice(total.contains.indexOf(d.id), 1);
+
+            total.contains.splice(total.contains.indexOf(i),1);
             for(var j = 0; j < 27; j++) {
                 total.releases[j] -= d.releases[j];
                 total.recycling[j] -= d.recycling[j];
