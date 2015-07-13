@@ -139,7 +139,7 @@ h1 {
 #list {
     float:left;
     max-width: 50px;
-    height: 200px;
+    height: 300px;
 }
 
 .listEle {
@@ -262,4 +262,9 @@ div.no_selection {
   stroke: green;
   shape-rendering: crispEdges;
   display: none;
+}
+
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
 }

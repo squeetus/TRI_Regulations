@@ -96,10 +96,10 @@ var toolContext = "select";                                                 // c
 var total = null; resetTotal();                                             // create and initialize total
 var width = window.innerWidth - 15,                                         // width and height values
     height = window.innerHeight - 15,
-    height1 = height - 200;
+    height1 = height - 300;
 var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);       // X and Y scales for line chart
 var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);   //
-
+var graph1, graph2;
 var releasesLine, recoveryLine, treatmentLine, recyclingLine;
 releasesLine = recoveryLine = treatmentLine = recyclingLine = null;
 
@@ -858,33 +858,38 @@ function updateKey(id) {
 
 }
 
-function lineGraph(d) {
+graph1 = d3.select("#graph1")
+    //.attr("id", "graph")
+    .attr("x", 150)
+    .attr("width", width-100)
+    .attr("height", 150)
+    .attr("opacity", 1);
+
+graph2 = d3.select("#graph2")
+    .attr("x", 150)
+    .attr("width", width-100)
+    .attr("height", 150)
+    .attr("opacity", 1);
+
+var xScale = d3.scale.linear().range([144, width-100]).domain([1987, 2014])
+var legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true)
+
+function lineGraph(d, id) {
     //console.log(d);
+    var graph = (id == 1) ? graph1 : graph2;
 
     d3.select("#key")
         .style("opacity", 1);
 
-
-
-
-    var graph = d3.select("#graph")
-        //.attr("id", "graph")
-        .attr("x", 150)
-        .attr("width", width-100)
-        .attr("height", 200)
-        .attr("opacity", 1);
-
     graph.selectAll("*").remove();
 
-    var xScale = d3.scale.linear().range([144, width-100]).domain([1987, 2014]),
-
-    yScale = d3.scale.linear().range([200-25, 25]).domain(
+    var yScale = d3.scale.linear().range([150-25, 25]).domain(
         [
             Math.min(d3.min(d.releases), d3.min(d.recycling), d3.min(d.recovery), d3.min(d.treatment)),
             Math.max(d3.max(d.releases), d3.max(d.recycling), d3.max(d.recovery), d3.max(d.treatment))
         ]),
 
-    legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true),
+
 
     xAxis = d3.svg.axis()
         .scale(xScale)
@@ -892,16 +897,33 @@ function lineGraph(d) {
 
     yAxis = d3.svg.axis()
         .scale(yScale)
+        .ticks(5)
         .orient("left");
 
     graph.append("svg:g")
         .attr("class", "x axis")
-        .attr("transform", "translate(0," + (200 - 25) + ")")
+        .attr("transform", "translate(0," + (150 - 25) + ")")
         .call(xAxis);
+
     graph.append("svg:g")
         .attr("class", "y axis")
         .attr("transform", "translate(" + (150) + ",0)")
         .call(yAxis);
+
+    var yAxisGrid = yAxis.ticks(5)
+      .tickSize(width-200, 0)
+      .tickFormat("")
+      .orient("right");
+
+    graph.append("svg:g")
+        .classed('y', true)
+        .classed('grid', true)
+        .attr("transform", "translate(" + (150) + ",0)")
+        .call(yAxisGrid);
+
+
+
+
     var lineGen = d3.svg.line()
         .x(function(d,i) {
             return xScale(i + 1987);
@@ -1021,7 +1043,9 @@ function copyTotal() {
 
 function hideGraph() {
 //    console.log("hidegraph");
-    d3.select("#graph")
+    d3.select("#graph1")
+        .style("opacity", 0);
+    d3.select("#graph2")
         .style("opacity", 0);
     d3.select("#key")
         .style("opacity", 0);
@@ -1029,7 +1053,9 @@ function hideGraph() {
 
 function showGraph() {
 //    console.log("hidegraph");
-    d3.select("#graph")
+    d3.select("#graph1")
+        .style("opacity", 1);
+    d3.select("#graph2")
         .style("opacity", 1);
     d3.select("#key")
         .style("opacity", 1);
@@ -1053,14 +1079,17 @@ function updateList() {
     listContents.enter().append("rect")
         .attr("opacity", 0)
         .attr("x", 5)
-        .attr("y", function(d, i) { return 180 - (12 * i); })
+        .attr("y", function(d, i) { return 280 - (12 * i); })
         .attr("width", "30px")
         .attr("height", "10px")
         .classed("listEle", true)
         //
         .attr("id", function(d, i) { return i; })
         .on("click", function(d, i) {
-            lineGraph(d.data);
+            if(event.shiftKey)
+              lineGraph(d.data, 2);
+            else
+              lineGraph(d.data, 1);
             reSelect(d);
         })
         .on("mouseover", function(d) {
