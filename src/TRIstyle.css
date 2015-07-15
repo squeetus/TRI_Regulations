@@ -132,10 +132,6 @@ h1 {
     height: 175px;
 }
 
-#graph {
-/*background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);*/
-}
-
 #list {
     float:left;
     max-width: 50px;
