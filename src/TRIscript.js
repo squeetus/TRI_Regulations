@@ -46,8 +46,6 @@ d3.selection.prototype.moveToFront = function() {
     });
 };
 
-function Queue(){var a=[],b=0;this.getLength=function(){return a.length-b};this.isEmpty=function(){return 0==a.length};this.enqueue=function(b){a.push(b)};this.dequeue=function(){if(0!=a.length){var c=a[b];2*++b>=a.length&&(a=a.slice(b),b=0);return c}};this.peek=function(){return 0<a.length?a[b]:void 0}};
-
 /////////////////////////////////////////////////////////////////////////////
 //
 //          G L O B A L S
@@ -72,6 +70,7 @@ var width = window.innerWidth - 15,                                         // w
 var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);       // X and Y scales for line chart
 var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);   //
 var graph1, graph2;
+var graphs = null;
 var releasesLine = [];
 var recoveryLine = [];
 var treatmentLine = [];
@@ -80,6 +79,10 @@ var currentComparison = null;                                               // H
 var matchScales = false;                                                    // sentinel value for rescaling line graphs
 releasesLine[0] = releasesLine[1] = recoveryLine[0] = recoveryLine[1] = treatmentLine[0] = treatmentLine[1] = recyclingLine[0] = recyclingLine[1] = null;
 
+var currentGraphData1, currentGraphData2, currentGraphScale1;
+currentGraphData1 = currentGraphData2 = copyTotal();
+currentGraphScale1 = d3.scale.linear().range([150-25, 25]).domain([0,0]);
+
 function comparison(name, type, data, collection) {
     this.title = name || "name";
     this.type = type || "type";
@@ -87,17 +90,10 @@ function comparison(name, type, data, collection) {
     this.collection = collection || [];
 }
 
-var lineGraphs = {
-  "graph1": false,
-  "graph2": false,
-  "yScaleSmaller": null,
-  "yScaleLarger": null,
-  "mode": 1,                    // 1 = dynamic comparison (ONE GRAPH)
-                                // 2 = multiple comparison (BOTH GRAPHS)
-  "toggle": function() {
-    this.mode = (this.mode == 1) ? 2 : 1;
-  }
-}
+var showingGraphTwo = false;
+var largerYScale = [0,0];
+var graphScaleDomains = [[0,0], [0,0]];
+var flagRedrawG2 = false;
 
 var selectedStates = {                                                      // selected state ids (for multiple select)
     "array": [],
@@ -171,7 +167,7 @@ var zoom = d3.behavior.zoom()
 
 // Quadtree for facility mapping
 var quadtree = d3.geom.quadtree()
-    .extent([[-1, -1], [width + 1, height1 + 1]])
+    .extent([[-1, -1], [width + 1, height + 1]]) //###
     .x(function(d) {
         return d.x;
     })
@@ -186,7 +182,7 @@ var color = d3.scale.quantize()
 // ALBERSUSA projection function
 var projection = d3.geo.albersUsa()
     .scale(1500)
-    .translate([width / 2, height1 / 2]);
+    .translate([width / 2, height / 2]); //###
 
 // Path global
 var path = d3.geo.path()
@@ -242,7 +238,7 @@ var facilityLayer = svg.append("g")
 var backgroundRect = quadTreeLayer.append("rect")
     .attr("class", "background")
     .attr("width", width)
-    .attr("height", height1)
+    .attr("height", height) //###
     .on("click", clickedBackground);
 
 
@@ -253,8 +249,16 @@ function clickedBackground() {
     clearFacilities();
     clearState();
     currentComparison = null;
+    largerYScale = [0,0];
 
-    hideGraph();
+
+    if(showingGraphTwo) {
+      hideGraph();
+      showingGraphTwo = false;
+    } else {
+      hideGraph(1);
+      d3.select("#key").style("opacity", 0);
+    }
 };
 
 function reorderLayers() {
@@ -303,8 +307,8 @@ function zoomHandler() {
     if (toolContext == ("brush") && event.shiftKey) {
         d3.select(".brush")
             .style("display", "block");
-        d3.select("#graph")
-            .style("opacity", 1);
+        d3.select("#graphs")
+            .style("opacity", .85);
         d3.select("#key")
             .style("opacity", 1);
         zoom.translate(translate);
@@ -337,7 +341,7 @@ function zoomend() {
     // Worth only updating facilityLayer for performance?
     //facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
 
-    if(toolContext == ("brush") && !event.shiftKey) {
+    if(toolContext == ("brush") && (!event || !event.shiftKey)) {
         clearEffects();
         currentComparison = null;
         brushLayer.moveToFront();
@@ -385,6 +389,7 @@ d3.json("data/us.json", function(error, us) {
 
 
 function clickedState(d) {
+    showGraph(1);
     if(event.shiftKey)
       addState(d);
     else
@@ -419,7 +424,15 @@ function highlightState(d) {
         fac.classed("selected", function(d) { d.state == thisState ?  true : false; });
         fac.each(function(d, i) { if(d.state == thisState) {removeFacilityFromTotal(d, i); } });
         //lineGraph(total);
-        hideGraph();
+        if(showingGraphTwo) {
+          clearGraph(1);
+          updateComparison();
+        } else {
+          //hideGraph(1);
+          //clearGraph(1);
+
+          lineGraph(getBlankDataArrays());
+        }
 
         selectedState = null;
         selectedStates.remove(thisState);
@@ -428,6 +441,43 @@ function highlightState(d) {
 
     } else {
         resetTotal();
+        if(showingGraphTwo && flagRedrawG2) {
+          // console.log("REDRAWING G2");
+          var domainG1 =
+          [
+              Math.min(d3.min(total.releases), d3.min(total.recycling), d3.min(total.recovery), d3.min(total.treatment)),
+              Math.max(d3.max(total.releases), d3.max(total.recycling), d3.max(total.recovery), d3.max(total.treatment))
+          ];
+
+          var tmp = compareList.data[compareList.pos].data;
+          var domainG2 =
+          [
+              Math.min(d3.min(tmp.releases), d3.min(tmp.recycling), d3.min(tmp.recovery), d3.min(tmp.treatment)),
+              Math.max(d3.max(tmp.releases), d3.max(tmp.recycling), d3.max(tmp.recovery), d3.max(tmp.treatment))
+          ];
+
+          if(domainG1[1] > domainG2[1]) {
+            largerYScale = domainG1;
+            resizeGraph(domainG1, 1);
+            resizeGraph(domainG1, 2);
+          } else {
+            largerYScale = domainG2;
+            resizeGraph(domainG2, 1);
+            resizeGraph(domainG2, 2);
+          }
+
+        } else {
+          var domainG1 =
+          [
+              Math.min(d3.min(total.releases), d3.min(total.recycling), d3.min(total.recovery), d3.min(total.treatment)),
+              Math.max(d3.max(total.releases), d3.max(total.recycling), d3.max(total.recovery), d3.max(total.treatment))
+          ];
+          if(domainG1[1] > largerYScale[1]) {
+            largerYScale = domainG1;
+            resizeGraph(domainG1, 1);
+          }
+        }
+
         selectedState = thisState;
         selectedStates.add(thisState)
         // console.log(selectedStates.array);
@@ -444,6 +494,7 @@ function highlightState(d) {
 }
 
 function addState(d) {
+
   //console.log("adding state");
     var thisState = d.id;
 
@@ -462,7 +513,14 @@ function addState(d) {
           fac.classed("selected", false);
           selectedState = null;
           resetTotal();
-          hideGraph();
+          if(showingGraphTwo) {
+            //hideGraph();
+            clearGraph(1);
+            updateComparison();
+          } else {
+            //hideGraph(1);
+            lineGraph(total, 1);
+          }
           currentComparison = null;
 
         // Still some selected states...
@@ -472,6 +530,43 @@ function addState(d) {
           fac.classed("fade", function(d) { return !selectedStates.contains(d.state); });
           fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
           fac.each(function(d, i) { if(d.state == thisState) { removeFacilityFromTotal(d, i); } });
+
+          if(showingGraphTwo && flagRedrawG2) {
+            var domainG1 =
+            [
+                Math.min(d3.min(total.releases), d3.min(total.recycling), d3.min(total.recovery), d3.min(total.treatment)),
+                Math.max(d3.max(total.releases), d3.max(total.recycling), d3.max(total.recovery), d3.max(total.treatment))
+            ];
+
+            var tmp = compareList.data[compareList.pos].data;
+            var domainG2 =
+            [
+                Math.min(d3.min(tmp.releases), d3.min(tmp.recycling), d3.min(tmp.recovery), d3.min(tmp.treatment)),
+                Math.max(d3.max(tmp.releases), d3.max(tmp.recycling), d3.max(tmp.recovery), d3.max(tmp.treatment))
+            ];
+
+            if(domainG1[1] > domainG2[1]) {
+
+              largerYScale = domainG1;
+              resizeGraph(domainG1, 1);
+              resizeGraph(domainG1, 2);
+            } else if(domainG1[1] <= domainG2[1]){
+              largerYScale = domainG2;
+              resizeGraph(domainG2, 1);
+              resizeGraph(domainG2, 2);
+            }
+          } else {
+            var domainG1 =
+            [
+                Math.min(d3.min(total.releases), d3.min(total.recycling), d3.min(total.recovery), d3.min(total.treatment)),
+                Math.max(d3.max(total.releases), d3.max(total.recycling), d3.max(total.recovery), d3.max(total.treatment))
+            ];
+            if(domainG1[1] > largerYScale[1]) {
+              largerYScale = domainG1;
+              resizeGraph(domainG1, 1);
+            }
+          }
+
           lineGraph(total);
 
           // TODO: Set this up to show a list of the states in the selection?
@@ -493,7 +588,11 @@ function addState(d) {
         fac.classed("fade", function(d) { return !selectedStates.contains(d.state); });
         fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
         fac.each(function(d, i) { if(d.state == thisState) { addFacilityToTotal(d, i); } });
+
+        //console.log("should be different; cgd1 not updated yet.", currentGraphData1.releases, total.releases);
+
         lineGraph(total);
+
         if(selectedStates.array.length == 1)
           currentComparison = new comparison( thisState, "states", copyTotal(), selectedStates.array);
         else
@@ -627,8 +726,7 @@ function hover(d) {
     if(brushing || selectedState || !selectedStates.empty())
         return;
 
-    d3.select("#graph")
-            .style("opacity", 1);
+    showGraph(1);
 
     //Update position of dataView div
     var dataDiv = d3.select("#dataView")
@@ -654,6 +752,33 @@ function hover(d) {
 
     //Show data div
     showData(dataDiv, d);
+
+    if(showingGraphTwo && flagRedrawG2) {
+      // console.log("REDRAWING G2");
+      var domainG1 =
+      [
+          Math.min(d3.min(total.releases), d3.min(total.recycling), d3.min(total.recovery), d3.min(total.treatment)),
+          Math.max(d3.max(total.releases), d3.max(total.recycling), d3.max(total.recovery), d3.max(total.treatment))
+      ];
+
+      var tmp = compareList.data[compareList.pos].data;
+      var domainG2 =
+      [
+          Math.min(d3.min(tmp.releases), d3.min(tmp.recycling), d3.min(tmp.recovery), d3.min(tmp.treatment)),
+          Math.max(d3.max(tmp.releases), d3.max(tmp.recycling), d3.max(tmp.recovery), d3.max(tmp.treatment))
+      ];
+
+      if(domainG1[1] > domainG2[1]) {
+        largerYScale = domainG1;
+        resizeGraph(domainG1, 1);
+        resizeGraph(domainG1, 2);
+      } else {
+        largerYScale = domainG2;
+        resizeGraph(domainG2, 1);
+        resizeGraph(domainG2, 2);
+      }
+
+    }
 }
 
 function out() {
@@ -664,10 +789,6 @@ function out() {
         .classed("brushed", false);
 
     showData(null, null);
-    //d3.select("#graph").selectAll("*").remove();
-
-    // d3.select("#key")
-    //     .style("opacity", 0);
 
     currentComparison = null;
 }
@@ -792,8 +913,36 @@ function brushend() {
         resetTotal();
     }
 
+    if(showingGraphTwo && flagRedrawG2) {
+        // console.log("REDRAWING G2");
+        var domainG1 =
+        [
+            Math.min(d3.min(total.releases), d3.min(total.recycling), d3.min(total.recovery), d3.min(total.treatment)),
+            Math.max(d3.max(total.releases), d3.max(total.recycling), d3.max(total.recovery), d3.max(total.treatment))
+        ];
+
+        var tmp = compareList.data[compareList.pos].data;
+        var domainG2 =
+        [
+            Math.min(d3.min(tmp.releases), d3.min(tmp.recycling), d3.min(tmp.recovery), d3.min(tmp.treatment)),
+            Math.max(d3.max(tmp.releases), d3.max(tmp.recycling), d3.max(tmp.recovery), d3.max(tmp.treatment))
+        ];
+
+        if(domainG1[1] > domainG2[1]) {
+          largerYScale = domainG1;
+          resizeGraph(domainG1, 1);
+          resizeGraph(domainG1, 2);
+        } else {
+          largerYScale = domainG2;
+          resizeGraph(domainG2, 1);
+          resizeGraph(domainG2, 2);
+        }
+
+      }
+
 
     lineGraph(total);
+    showGraph(1);
     currentComparison = new comparison( "Brushed Region", "brush", copyTotal(), brushedFac);
     // compareList.add(new comparison( "Brushed Region", "brush", copyTotal(), brushedFac));
     // updateList();
@@ -821,10 +970,6 @@ function clearBrush() {
 }
 
 /////////////////////////////////////////////////////////////////////////////
-//
-//          L I N E   G R A P H
-//
-//          A N D
 //
 //          K E Y
 //
@@ -881,19 +1026,19 @@ function updateKey(id) {
       switch(id) {
         case 1:
           releasesLine[0].classed("deselected", true);
-          releasesLine[1].classed("deselected", true);
+          if(releasesLine[1]) releasesLine[1].classed("deselected", true);
           break;
         case 2:
           recyclingLine[0].classed("deselected", true);
-          recyclingLine[1].classed("deselected", true);
+          if(releasesLine[1]) recyclingLine[1].classed("deselected", true);
           break;
         case 3:
           treatmentLine[0].classed("deselected", true);
-          treatmentLine[1].classed("deselected", true);
+          if(releasesLine[1]) treatmentLine[1].classed("deselected", true);
           break;
         case 4:
           recoveryLine[0].classed("deselected", true);
-          recoveryLine[1].classed("deselected", true);
+          if(releasesLine[1]) recoveryLine[1].classed("deselected", true);
           break;
       }
     } else {
@@ -904,190 +1049,400 @@ function updateKey(id) {
       switch(id) {
         case 1:
           releasesLine[0].classed("deselected", false);
-          releasesLine[1].classed("deselected", false);
+          if(releasesLine[1]) releasesLine[1].classed("deselected", false);
           break;
         case 2:
           recyclingLine[0].classed("deselected", false);
-          recyclingLine[1].classed("deselected", false);
+          if(releasesLine[1]) recyclingLine[1].classed("deselected", false);
           break;
         case 3:
           treatmentLine[0].classed("deselected", false);
-          treatmentLine[1].classed("deselected", false);
+          if(releasesLine[1]) treatmentLine[1].classed("deselected", false);
           break;
         case 4:
           recoveryLine[0].classed("deselected", false);
-          recoveryLine[1].classed("deselected", false);
+          if(releasesLine[1]) recoveryLine[1].classed("deselected", false);
           break;
       }
     }
 
 }
 
-graph1 = d3.select("#graph1")
-  .attr("width", width-100)
-    //.attr("id", "graph")
-    // .attr("x", 150)
-    // .attr("width", width-100)
-    // .attr("height", 150)
-    // .attr("opacity", 1);
+/////////////////////////////////////////////////////////////////////////////
+//
+//          L I N E   G R A P H
+//
+/////////////////////////////////////////////////////////////////////////////
 
-graph2 = d3.select("#graph2")
-    .attr("x", 150)
-    .attr("width", width-100)
+function initializeLineGraphs() {
+
+  graph1 = d3.select("#graph1")
+    .attr("width", width-50)
     .attr("height", 150)
-    .attr("opacity", 1);
+    .attr("opacity", 0);
 
-var xScale = d3.scale.linear().range([144, width-100]).domain([1987, 2014])
-var legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true)
+  graph2 = d3.select("#graph2")
+      .attr("x", 150)
+      .attr("width", width-100)
+      .attr("height", 150)
+      .attr("opacity", 1);
+
+  var xScale = d3.scale.linear().range([144, width-100]).domain([1987, 2014]);
+  var yScale = d3.scale.linear().range([150-25, 25]).domain([0,0]);
+  var legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true);
+
+  var xAxis = d3.svg.axis()
+      .scale(xScale)
+      .tickFormat(d3.format("####")),
+
+      yAxis = d3.svg.axis()
+        .scale(yScale)
+        .ticks(5)
+        .orient("left");//,
+
+        //largerYScale = d3.scale.linear().range([150-25, 25]).domain([0,0]);
+
+  graph1.append("svg:g")
+      .attr("class", "y axis")
+      .attr("transform", "translate(" + (150) + ",0)")
+      .call(yAxis);
+
+  graph2.append("svg:g")
+      .attr("class", "y axis")
+      .attr("transform", "translate(" + (150) + ",0)")
+      .call(yAxis);
+
+  var yGrid = yAxis.ticks(5)
+        .tickSize(width-200, 0)
+        .tickFormat("")
+        .orient("right");
+
+  graph1.append("svg:g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + (150 - 25) + ")")
+      .call(xAxis);
+
+  graph1.append("svg:g")
+      .classed('y', true)
+      .classed('grid', true)
+      .attr("transform", "translate(" + (150) + ",0)")
+      .call(yGrid);
+
+  graph2.append("svg:g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + (150 - 25) + ")")
+      .call(xAxis);
+
+  graph2.append("svg:g")
+      .classed('y', true)
+      .classed('grid', true)
+      .attr("transform", "translate(" + (150) + ",0)")
+      .call(yGrid);
+
+  // Add a y-axis label
+  graph1.append("text")
+      .attr("class", "y label")
+      .attr("text-anchor", "end")
+      .attr("y", function() {
+          return 100 - legendScale(yScale.domain()[1]); })
+      .attr("dy", ".75em")
+
+      .attr("transform", "rotate(-90)")
+      .text("Chemical Usage (lbs)");
+
+  var lineGen = d3.svg.line()
+      .x(function(d,i) {
+          return xScale(i + 1987);
+      })
+      .y(function(d) {
+          return currentGraphScale1(d);
+      })
+      .interpolate("linear");
+
+  releasesLine[0] = graph1.append('svg:path')
+      .attr('d', lineGen(currentGraphData1.releases))
+      .attr('stroke', 'red')
+      .classed('lineChart', true)
+      .classed('deselected', function(d) {
+          return !keySelected[1].value
+      });
+  recyclingLine[0] = graph1.append('svg:path')
+      .attr('d', lineGen(currentGraphData1.recycling))
+      .attr('stroke', 'green')
+      .classed('lineChart', true)
+      .classed('deselected', function(d) {
+          return !keySelected[2].value
+      });
+  treatmentLine[0] = graph1.append('svg:path')
+      .attr('d', lineGen(currentGraphData1.treatment))
+      .attr('stroke', 'purple')
+      .classed('lineChart', true)
+      .classed('deselected', function(d) {
+          return !keySelected[3].value
+      });
+  recoveryLine[0] = graph1.append('svg:path')
+     .attr('d', lineGen(currentGraphData1.recovery))
+     .attr('stroke', 'blue')
+     .classed('lineChart', true)
+     .classed('deselected', function(d) {
+         return !keySelected[4].value
+     });
+
+  releasesLine[1] = graph2.append('svg:path')
+     .attr('d', lineGen(currentGraphData1.releases))
+     .attr('stroke', 'red')
+     .classed('lineChart', true)
+     .classed('deselected', function(d) {
+         return !keySelected[1].value
+     });
+  recyclingLine[1] = graph2.append('svg:path')
+     .attr('d', lineGen(currentGraphData1.recycling))
+     .attr('stroke', 'green')
+     .classed('lineChart', true)
+     .classed('deselected', function(d) {
+         return !keySelected[2].value
+     });
+  treatmentLine[1] = graph2.append('svg:path')
+     .attr('d', lineGen(currentGraphData1.treatment))
+     .attr('stroke', 'purple')
+     .classed('lineChart', true)
+     .classed('deselected', function(d) {
+         return !keySelected[3].value
+     });
+  recoveryLine[1] = graph2.append('svg:path')
+    .attr('d', lineGen(currentGraphData1.recovery))
+    .attr('stroke', 'blue')
+    .classed('lineChart', true)
+    .classed('deselected', function(d) {
+        return !keySelected[4].value
+    });
+
+    //reinitialize yAxis
+    yAxis = d3.svg.axis()
+      .scale(yScale)
+      .ticks(5)
+      .orient("left");
+
+    return {
+      xScale: xScale,
+      yScale: yScale,
+      xAxis: xAxis,
+      yAxis: yAxis,
+      lineGen: lineGen,
+      legendScale: legendScale,
+      yGrid: yGrid
+    }
+}
+
+function decideLargerYScale() {
+
+
+
+}
 
 function lineGraph(d, id) {
-    //console.log(graph1, graph2);
-
+    if(!d || !d.releases) return;
+  // console.log(largerYScale.domain(), graphs.yScale.domain());
     var graph = (id == 2) ? graph2 : graph1;
     var index = (id == 2) ? 1 : 0;
 
-    d3.select("#key")
-        .style("opacity", 1);
-
-    graph.selectAll("*").remove();
-
-    var yScale = d3.scale.linear().range([150-25, 25]).domain(
+    graphs.yScale.domain(
     [
         Math.min(d3.min(d.releases), d3.min(d.recycling), d3.min(d.recovery), d3.min(d.treatment)),
         Math.max(d3.max(d.releases), d3.max(d.recycling), d3.max(d.recovery), d3.max(d.treatment))
     ]);
 
     // Scale both graphs appropriately
-    if(matchScales) {
-      // if(!lineGraphs.yScaleLarger) {
-      //   yScaleLarger = yScale;
-      // } else {
-      //   if(yScale.domain()[1] > yScaleLarger.domain()[1]) {
-      //       console.log("NEW ONE LARGER");
-      //       yScaleSmaller = yScaleLarger;
-      //       yScaleLarger = yScale;
-      //
-      //       resizeGraphs(yScaleLarger);
-      //
-      //   } else if (yScale.domain()[1] < yScaleLarger.domain()[1]) {
-      //       console.log("NEW ONE SMALLER");
-      //       yScaleSmaller = yScale;
-      //       yScale = yScaleLarger;
-      //       console.log("smaller: ", yScaleSmaller.domain());
-      //   } else {
-      //       console.log("SAME YO");
-      //   }
-      // }
+    if(showingGraphTwo) {
+
+      if(!largerYScale) {
+        largerYScale = graphs.yScale.domain();
+        //console.log("!!", largerYScale);
+      } else {
+        //console.log(largerYScale[1], graphs.yScale.domain()[1]);
+        // new scale is larger than current graph2
+        if(graphs.yScale.domain()[1] > largerYScale[1]) {
+            largerYScale = graphs.yScale.domain();
+            //console.log(largerYScale);
+            if(showingGraphTwo)
+              resizeGraph(largerYScale, 2);
+        // new scale is smaller than current graph2; use graph2's scale
+      } else if (graphs.yScale.domain()[1] < largerYScale[1]) {
+            graphs.yScale.domain(largerYScale);
+        } else {
+            // scales are the same, proceed as normal
+        }
+      }
     }
 
-    var xAxis = d3.svg.axis()
-        .scale(xScale)
-        .tickFormat(d3.format("####")),
+  //  graphScaleDomains[index] = graphs.yScale.domain();
 
     yAxis = d3.svg.axis()
-        .scale(yScale)
+        .scale(graphs.yScale)
         .ticks(5)
         .orient("left");
 
-    graph.append("svg:g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + (150 - 25) + ")")
-        .call(xAxis);
+    graph.select(".y.axis").transition().duration(1000).call(graphs.yAxis);
 
-    graph.append("svg:g")
-        .attr("class", "y axis")
-        .attr("transform", "translate(" + (150) + ",0)")
-        .call(yAxis);
-
-    var yAxisGrid = yAxis.ticks(5)
+    yGrid = yAxis.ticks(5)
       .tickSize(width-200, 0)
       .tickFormat("")
       .orient("right");
 
-    graph.append("svg:g")
-        .classed('y', true)
-        .classed('grid', true)
-        .attr("transform", "translate(" + (150) + ",0)")
-        .call(yAxisGrid);
+    graph.select(".y.grid").transition().duration(1000).call(graphs.yGrid);
 
+    graph.select(".y.label").transition().duration(1000).attr("y", function() {
+        return 100 - graphs.legendScale(graphs.yScale.domain()[1]); });
 
+    // Update lineGen with the appropriate y()
+    graphs.lineGen.y(function(d) {
+      return graphs.yScale(d);
+    })
 
+    releasesLine[index]
+        .transition().duration(250).delay(100)
+        .attr('d', graphs.lineGen(d.releases));
+    recyclingLine[index]
+        .transition().duration(250).delay(200)
+        .attr('d', graphs.lineGen(d.recycling))
+    treatmentLine[index]
+         .transition().duration(250).delay(300)
+         .attr('d', graphs.lineGen(d.treatment))
+    recoveryLine[index]
+         .transition().duration(250).delay(400)
+         .attr('d', graphs.lineGen(d.recovery))
 
-    var lineGen = d3.svg.line()
-        .x(function(d,i) {
-            return xScale(i + 1987);
-        })
-        .y(function(d) {
-            return yScale(d);
-        })
-        .interpolate("linear");
+    currentGraphData1 = copyData(d);
 
-    // Add a y-axis label.
-    graph.append("text")
-        .attr("class", "y label")
-        .attr("text-anchor", "end")
-        .attr("y", function() {
-//            console.log(yScale.domain()[1], 60 - legendScale(yScale.domain()[1]));
-            return 100 - legendScale(yScale.domain()[1]); })
-        .attr("dy", ".75em")
-        .attr("transform", "rotate(-90)")
-        .text("Chemical Usage (lbs)");
-
-    releasesLine[index] = graph.append('svg:path')
-        .attr('d', lineGen(d.releases))
-        .attr('stroke', 'red')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none')
-        .classed('deselected', function(d) {
-            return !keySelected[1].value
-        });
-    recyclingLine[index] = graph.append('svg:path')
-        .attr('d', lineGen(d.recycling))
-        .attr('stroke', 'green')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none')
-        .classed('deselected', function(d) {
-            return !keySelected[2].value
-        });;
-   treatmentLine[index] = graph.append('svg:path')
-        .attr('d', lineGen(d.treatment))
-        .attr('stroke', 'purple')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none')
-        .classed('deselected', function(d) {
-            return !keySelected[3].value
-        });;
-   recoveryLine[index] = graph.append('svg:path')
-        .attr('d', lineGen(d.recovery))
-        .attr('stroke', 'blue')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none')
-        .classed('deselected', function(d) {
-            return !keySelected[4].value
-        });;
-
-    showGraph();
-    //compareList.add(copyTotal());
-//    compareStack.push(copyTotal());
-//    updateList();
 }
 
-function resizeGraphs(yScale) {
-    console.log("Resizing both graphs to use the larger scale: ", yScale.domain());
-    var g1 = d3.select("#graph1"),
-        g2 = d3.select("#graph2");
+function resizeGraph(yScaleDomain, id) {
+    //console.log("resizing", yScaleDomain);
+    var index = (id == 2) ? 1 : 0;
+    var graph = (id == 2) ? graph2 : graph1;
+    var d;
+
+    if(index == 1)
+      d = compareList.data[compareList.pos].data;
+    else d = total;
+
+    graphs.yScale.domain(yScaleDomain);
+    if(index == 1) flagRedrawG2 = true;
+    //console.log("Resizing both graphs to use the larger scale: ", graphs.yScale.domain(), flagRedrawG2);
+
+    // var g1 = d3.select("#graph1"),
+    //     g2 = d3.select("#graph2");
 
     var newAxis = d3.svg.axis()
-        .scale(yScale)
+        .scale(graphs.yScale)
         .ticks(5)
         .orient("left");
 
-    g1.selectAll(".y.axis").call(newAxis);
-    g2.selectAll(".y.axis").call(newAxis);
+    graph.selectAll(".y.axis").transition().duration(1000).call(newAxis);
+    //g2.selectAll(".y.axis").transition().duration(1000).call(newAxis);
+
+    var newYAxisGrid = newAxis.ticks(5)
+      .tickSize(width-200, 0)
+      .tickFormat("")
+      .orient("right");
+
+    graph.selectAll(".y.grid").transition().duration(1000).call(newYAxisGrid);
+    //g2.selectAll(".y.grid").transition().duration(1000).call(newYAxisGrid);
+
+    // Update lineGen with the appropriate y()
+    graphs.lineGen.y(function(d) {
+      return graphs.yScale(d);
+    })
+
+    releasesLine[index].transition().duration(1000).attr('d', graphs.lineGen(d.releases));
+    recyclingLine[index].transition().duration(1000).attr('d', graphs.lineGen(d.recycling));
+    treatmentLine[index].transition().duration(1000).attr('d', graphs.lineGen(d.treatment));
+    recoveryLine[index].transition().duration(1000).attr('d', graphs.lineGen(d.recovery));
+}
+
+function updateComparison() {
+    //console.log("updating graph2 scales");
+    largerYScale = null;
+    lineGraph(getBlankDataArrays(), 1);
+    lineGraph(compareList.data[compareList.pos].data, 2);
+}
+
+function showGraph(arg) {
+  if(!arg) {
+    d3.select("#graphs")
+        .style("opacity", 1);
+  } else if (arg == 1) {
+    d3.select("#graphs")
+        .style("opacity", 1);
+    d3.select("#graph1", 1)
+        .style("opacity", 1);
+
+  } else if (arg == 2) {
+    d3.select("#graphs")
+        .style("opacity", 1);
+    d3.select("#graph2")
+        .style("opacity", 1);
+  }
+
+  d3.select("#key")
+      .style("opacity", 1);
+}
+
+function hideGraph(arg) {
+    if(!arg) {
+      d3.select("#graphs")
+          .style("opacity", 0);
+      d3.select("#graph1")
+          .style("opacity", 0);
+      d3.select("#graph2")
+          .style("opacity", 0);
+      d3.select("#key")
+          .style("opacity", 0);
+    } else if (arg == 1) {
+      d3.select("#graph1")
+          .style("opacity", 0);
+    } else if (arg == 2) {
+      d3.select("#graph2")
+          .style("opacity", 0);
+    }
+}
+
+function clearGraph(id) {
+  resetTotal();
+
+  if(!id) {
+    //clear all
+    releasesLine[0].attr('d', graphs.lineGen(copyTotal()));
+    recyclingLine[0].attr('d', graphs.lineGen(copyTotal()));
+    treatmentLine[0].attr('d', graphs.lineGen(copyTotal()));
+    recoveryLine[0].attr('d', graphs.lineGen(copyTotal()));
+    releasesLine[1].attr('d', graphs.lineGen(copyTotal()));
+    recyclingLine[1].attr('d', graphs.lineGen(copyTotal()));
+    treatmentLine[1].attr('d', graphs.lineGen(copyTotal()));
+    recoveryLine[1].attr('d', graphs.lineGen(copyTotal()));
+
+  } else if (id == 1) {
+    releasesLine[0].attr('d', graphs.lineGen(copyTotal()));
+    recyclingLine[0].attr('d', graphs.lineGen(copyTotal()));
+    treatmentLine[0].attr('d', graphs.lineGen(copyTotal()));
+    recoveryLine[0].attr('d', graphs.lineGen(copyTotal()));
+
+
+  } else if (id == 2) {
+    releasesLine[1].attr('d', graphs.lineGen(copyTotal()));
+    recyclingLine[1].attr('d', graphs.lineGen(copyTotal()));
+    treatmentLine[1].attr('d', graphs.lineGen(copyTotal()));
+    recoveryLine[1].attr('d', graphs.lineGen(copyTotal()));
+  }
 }
 
 function resetTotal() {
-    total = {
+
+    total = getBlankDataArrays();
+}
+
+function getBlankDataArrays() {
+    return {
         "releases":     [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
         "recycling":    [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
         "treatment":    [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
@@ -1143,25 +1498,16 @@ function copyTotal() {
     }
 }
 
-function hideGraph() {
-//    console.log("hidegraph");
-    d3.select("#graph1")
-        .style("opacity", 0);
-    d3.select("#graph2")
-        .style("opacity", 0);
-    d3.select("#key")
-        .style("opacity", 0);
+function copyData(array) {
+    return {
+      "releases": array.releases.slice(),
+      "recycling": array.recycling.slice(),
+      "treatment": array.treatment.slice(),
+      "recovery": array.recovery.slice(),
+      "contains": array.contains.slice()
+    }
 }
 
-function showGraph() {
-//    console.log("hidegraph");
-    d3.select("#graph1")
-        .style("opacity", 1);
-    d3.select("#graph2")
-        .style("opacity", 1);
-    d3.select("#key")
-        .style("opacity", 1);
-}
 
 
 
@@ -1188,13 +1534,19 @@ function updateList() {
         //
         .attr("id", function(d, i) { return i; })
         .on("click", function(d, i) {
-            matchScales = true;
-
-            if(event.shiftKey)
-              lineGraph(d.data, 2);
-            else
+            flagRedrawG2 = false;
+            if(event.shiftKey) {
+              showGraph(2);
               lineGraph(d.data, 1);
-            reSelect(d);
+              reSelect(d);
+            } else {
+              showingGraphTwo = true;
+              showGraph(2);
+              lineGraph(d.data, 2);
+              reSelect(d);
+
+            }
+
         })
         .on("mouseover", function(d) {
             hoverList(d);
@@ -1291,6 +1643,12 @@ function init() {
 
     usaLayer.moveToFront();
     facilityLayer.moveToFront();
+
+
+    graphs = initializeLineGraphs();
+    hideGraph();
+
+
 }
 
 
@@ -1350,6 +1708,9 @@ function bindKeys() {
             if(currentComparison) {
               popupTooltip("Added");
               compareList.add(currentComparison);
+              lineGraph(currentComparison.data,2);
+              showGraph(2);
+              showingGraphTwo = true;
               updateList();
             }
         }
@@ -1361,18 +1722,19 @@ function bindKeys() {
             clearList();
             hideGraph();
             popupTooltip("clear list");
+            showingGraphTwo = false;
+            flagRedrawG2 = false;
 
         }
 
         // FIVE
         if ( d3.event.keyCode === 53) {
             console.log(currentComparison, compareList.data);
-            resetTotal()
-            lineGraph(total, 1);
-            lineGraph(total, 2);
-            hideGraph();
+            // resetTotal()
+            // lineGraph(total, 1);
+            // lineGraph(total, 2);
+            // hideGraph(1);
         }
-
     });
 }
 
