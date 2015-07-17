@@ -418,6 +418,8 @@ function highlightState(d) {
     selectedStates.clear();
 
     if(thisState == selectedState) {
+        selectingState = false;
+        fac.classed("clickThrough", false);
         resetTotal();
         states.classed("fade", false);
         fac.classed("fade", function(d) { d.state == thisState ? false : true; });
@@ -440,6 +442,8 @@ function highlightState(d) {
         // console.log(selectedStates.array);
 
     } else {
+        selectingState = true;
+        fac.classed("clickThrough", true);
         resetTotal();
         if(showingGraphTwo && flagRedrawG2) {
           // console.log("REDRAWING G2");
@@ -507,6 +511,8 @@ function addState(d) {
 
         //Last value in selectedStates
         if(selectedStates.array.length <= 0) {
+          selectingState = false;
+          fac.classed("clickThrough", false);
           // console.log("LAST STATE, NO FADE");
           states.classed("fade", false);
           fac.classed("fade", false);
@@ -579,8 +585,8 @@ function addState(d) {
         }
 
     } else {
-        //console.log("not selected: ", selectedStates.array);
-        // resetTotal();
+        selectingState = true;
+        fac.classed("clickThrough", true);
         selectedStates.add(thisState);
         // console.log("adding.. ", thisState, selectedStates.array);
 
