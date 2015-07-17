@@ -251,6 +251,7 @@ function clickedBackground() {
     currentComparison = null;
     largerYScale = [0,0];
 
+    fac.classed("clickThrough", false);
 
     if(showingGraphTwo) {
       hideGraph();
@@ -258,6 +259,8 @@ function clickedBackground() {
     } else {
       hideGraph(1);
       d3.select("#key").style("opacity", 0);
+      d3.select("#graphLine")
+          .classed("hidden", true);
     }
 };
 
@@ -796,7 +799,7 @@ function out() {
 
     showData(null, null);
 
-    currentComparison = null;
+    //currentComparison = null;
 }
 
 function showData(facility, d) {
@@ -1085,20 +1088,27 @@ function initializeLineGraphs() {
   graph1 = d3.select("#graph1")
     .attr("width", width-50)
     .attr("height", 150)
-    .attr("opacity", 0);
+    .attr("opacity", 0)
+    .on("mouseover", graphHover)
+    .on("mousemove", graphMove)
+    .on("mouseout", graphOut);
 
   graph2 = d3.select("#graph2")
       .attr("x", 150)
       .attr("width", width-100)
       .attr("height", 150)
-      .attr("opacity", 1);
+      .attr("opacity", 1)
+      .on("mouseover", graphHover)
+      .on("mousemove", graphMove)
+      .on("mouseout", graphOut);
 
-  var xScale = d3.scale.linear().range([144, width-100]).domain([1987, 2014]);
+  var xScale = d3.scale.linear().range([144, width-100]).domain([1987, 2013]).clamp(true);
   var yScale = d3.scale.linear().range([150-25, 25]).domain([0,0]);
   var legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true);
 
   var xAxis = d3.svg.axis()
       .scale(xScale)
+      .tickSize(8)
       .tickFormat(d3.format("####")),
 
       yAxis = d3.svg.axis()
@@ -1119,7 +1129,7 @@ function initializeLineGraphs() {
       .call(yAxis);
 
   var yGrid = yAxis.ticks(5)
-        .tickSize(width-200, 0)
+        .tickSize(width-250, 0)
         .tickFormat("")
         .orient("right");
 
@@ -1240,10 +1250,69 @@ function initializeLineGraphs() {
     }
 }
 
-function decideLargerYScale() {
+function graphHover() {
+  d3.select("#graphLine")
+      .classed("hidden", false);
+}
+
+function graphOut() {
+  // console.log("out", event);
+}
+
+// var graphHoverRectangle = d3.select("#graphs").append("path").attr("class", "area");
+var graphHoverRectangle = d3.select("#graphLine").append("svg:rect").attr("class", "area");
+var graphHoverRectangle2 = d3.select("#graphLine").append("svg:rect").attr("class", "area");
 
 
+function graphMove() {
+  var m = d3.mouse(this),
+   thisYear = Math.floor(graphs.xScale.invert(m[0]));
+  var bounds = [
+    Math.floor(graphs.xScale(thisYear)),
+    Math.floor(graphs.xScale(thisYear+1))
+  ]
 
+
+  if(bounds[0]-15 != graphHoverRectangle.attr("x")) {
+
+    graphHoverRectangle
+        .attr("x", function() { return bounds[0]-15; })
+        .attr("y", 25)
+        .attr("width", 32)
+        .attr("height", 150)
+
+    //INFORMATION FROM LINEGRAPH hover
+    if(currentComparison)
+      console.log({
+          "year": thisYear,
+          "releases": currentComparison.data.releases[thisYear-1987],
+          "recycling": currentComparison.data.recycling[thisYear-1987],
+          "treatment": currentComparison.data.treatment[thisYear-1987],
+          "recovery": currentComparison.data.recovery[thisYear-1987]
+      });
+
+
+    if(showingGraphTwo) {
+        console.log({
+            "year": thisYear,
+            "releases": compareList.data[compareList.pos].data.releases[thisYear-1987],
+            "recycling": compareList.data[compareList.pos].data.recycling[thisYear-1987],
+            "treatment": compareList.data[compareList.pos].data.treatment[thisYear-1987],
+            "recovery": compareList.data[compareList.pos].data.recovery[thisYear-1987]
+        });
+        graphHoverRectangle2
+          .classed("hidden", false);
+
+        graphHoverRectangle2
+            .attr("x", function() { return bounds[0]-15; })
+            .attr("y", 175)
+            .attr("width", 32)
+            .attr("height", 150)
+    } else {
+        graphHoverRectangle2
+          .classed("hidden", true);
+    }
+  }
 }
 
 function lineGraph(d, id) {
@@ -1404,9 +1473,14 @@ function hideGraph(arg) {
           .style("opacity", 0);
       d3.select("#key")
           .style("opacity", 0);
+      d3.select("#graphLine")
+          .classed("hidden", true);
+
     } else if (arg == 1) {
       d3.select("#graph1")
           .style("opacity", 0);
+      d3.select("#graphLine")
+          .classed("hidden", true);
     } else if (arg == 2) {
       d3.select("#graph2")
           .style("opacity", 0);
@@ -1670,7 +1744,9 @@ function bindKeys() {
             clearState();
             clearFacilities();
             hideGraph();
-
+            showingGraphTwo = false;
+            flagRedrawG2 = false;
+            fac.classed("clickThrough", false);
             keySelected.reset();
 
 //            usaLayer.transition()
@@ -1727,6 +1803,7 @@ function bindKeys() {
             clearFacilities();
             clearList();
             hideGraph();
+            fac.classed("clickThrough", false);
             popupTooltip("clear list");
             showingGraphTwo = false;
             flagRedrawG2 = false;
