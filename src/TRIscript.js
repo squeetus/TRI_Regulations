@@ -651,8 +651,9 @@ d3.json("data/facilities.json", function(error, f) {
             totals += totalRelease + totalTreatment + totalRecycling + totalRecovery;
 
             // update state information
+            // KR, this is the part we need to update to play with the ratios
             s = f.facilities[facility].state;
-            if(s) {
+            if(s) {   // state is already in the stateRatios object
               if(stateRatios.hasOwnProperty(s)) {
                 stateRatios[s].totalRelease += totalRelease;
                 stateRatios[s].totalTreatment += totalTreatment;
@@ -661,18 +662,18 @@ d3.json("data/facilities.json", function(error, f) {
                 stateRatios[s].total += totals;
                 stateRatios[s].numFacilities++;
                 //stateRatios[s].ratio = (stateRatios[s].totalRelease / stateRatios[s].total) / stateRatios[s].numFacilities;
-                // stateRatios[s].ratio = (stateRatios[s].totalRelease / stateRatios[s].total);
-                stateRatios[s].ratio = stateRatios[s].totalRelease / (stateRatios[s].totalRecovery + totalTreatment + totalRecycling);
+                stateRatios[s].ratio = (stateRatios[s].totalRelease / stateRatios[s].total);
+                //stateRatios[s].ratio = stateRatios[s].totalRelease / (stateRatios[s].totalRecovery + totalTreatment + totalRecycling);
 
-              } else {
+              } else {   // state is not yet in the stateRatios object
                 stateRatios[s] = {
                   "totalRelease": totalRelease,
                   "totalTreatment": totalTreatment,
                   "totalRecycling": totalRecycling,
                   "totalRecovery": totalRecovery,
                   "total": totals,
-                  //"ratio": totalRelease / totals,
-                  "ratio": totalRelease / (totals - totalRelease),
+                  "ratio": totalRelease / totals,
+                  //"ratio": totalRelease / (totals - totalRelease),
                   "numFacilities": 1
                 }
               }
