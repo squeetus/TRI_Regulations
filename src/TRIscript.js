@@ -58,6 +58,7 @@ var nodeSize = 2;                                                           // b
 var strokeWidth = 0.5;                                                      // base stroke width for facilities
 var fac = null;                                                             // selection global for facilities
 var states = null;                                                          // selection global for states
+var stateRatios = {};                                                       // state ratios for coloring
 var stateLines = null;                                                      // size variable for stateLines
 var brushing = false;                                                       // is the user currently brushing (sentinel)
 var selectingState = false;                                                 // is the user currently selecting a state (sentinel)
@@ -177,6 +178,10 @@ var quadtree = d3.geom.quadtree()
 
 // Color scale for facilities
 var color = d3.scale.quantize()
+    .range(colorbrewer.RdYlGn[9]);
+
+// Color scale for states
+var stateColor = d3.scale.quantize()
     .range(colorbrewer.RdYlGn[9]);
 
 // ALBERSUSA projection function
@@ -620,8 +625,10 @@ d3.json("data/facilities.json", function(error, f) {
         console.log(error);
 
     var arr = [];
-    var x, y;
+    var x, y, s;
     var domain = [];
+    var stateDomain = [];
+    stateRatios = {};
     var flag = true;
     var totalRelease, totalTreatment, totalRecycling, totalRecovery, totals;
 
@@ -634,7 +641,7 @@ d3.json("data/facilities.json", function(error, f) {
 
             totalRecovery = totalRecycling = totalTreatment = totals = totalRelease = 0;
 
-            var badYears = 0;
+            //var badYears = 0; ??
             for(i = 0; i < 27; i++) {
                 totalRelease += f.facilities[facility].releases[i];
                 totalTreatment += f.facilities[facility].treatment[i];
@@ -642,6 +649,34 @@ d3.json("data/facilities.json", function(error, f) {
                 totalRecovery += f.facilities[facility].recovery[i];
             }
             totals += totalRelease + totalTreatment + totalRecycling + totalRecovery;
+
+            // update state information
+            s = f.facilities[facility].state;
+            if(s) {
+              if(stateRatios.hasOwnProperty(s)) {
+                stateRatios[s].totalRelease += totalRelease;
+                stateRatios[s].totalTreatment += totalTreatment;
+                stateRatios[s].totalRecycling += totalRecycling;
+                stateRatios[s].totalRecovery += totalRecovery;
+                stateRatios[s].total += totals;
+                stateRatios[s].numFacilities++;
+                //stateRatios[s].ratio = (stateRatios[s].totalRelease / stateRatios[s].total) / stateRatios[s].numFacilities;
+                // stateRatios[s].ratio = (stateRatios[s].totalRelease / stateRatios[s].total);
+                stateRatios[s].ratio = stateRatios[s].totalRelease / (stateRatios[s].totalRecovery + totalTreatment + totalRecycling);
+
+              } else {
+                stateRatios[s] = {
+                  "totalRelease": totalRelease,
+                  "totalTreatment": totalTreatment,
+                  "totalRecycling": totalRecycling,
+                  "totalRecovery": totalRecovery,
+                  "total": totals,
+                  //"ratio": totalRelease / totals,
+                  "ratio": totalRelease / (totals - totalRelease),
+                  "numFacilities": 1
+                }
+              }
+            }
 
             if(totals > 0)
                 totals = totalRelease / totals;
@@ -651,8 +686,30 @@ d3.json("data/facilities.json", function(error, f) {
             arr.push(f.facilities[facility]);
         }
     }
-     color.domain([d3.max(domain), d3.mean(domain), d3.min(domain)])
-//console.log(d3.extent(domain));
+
+    var tmp = []; // tmp!!! number of facs in each state
+    for(state in stateRatios) {
+        stateDomain.push(stateRatios[state].ratio);
+        //tmp.push({"state": state, "numFac": stateRatios[state].numFacilities});
+        tmp.push(stateRatios[state].numFacilities);
+    }
+
+    //console.log(tmp);
+    console.log(stateRatios[2]);
+    console.log(stateDomain.sort());
+    console.log(d3.max(stateDomain), d3.min(stateDomain), d3.mean(stateDomain), d3.median(stateDomain), d3.extent(stateDomain));
+    //console.log(stateDomain;
+
+    stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+    color.domain([d3.max(domain), d3.mean(domain), d3.min(domain)]);
+
+    states.style("fill", function(d) {
+        if (stateRatios[d.id])
+          return stateColor(stateRatios[d.id].ratio);
+        else {
+          return "tan";
+        }
+    });
 
     quadtree = quadtree(arr);
 
@@ -1231,7 +1288,8 @@ function initializeLineGraphs() {
 }
 
 function graphHover() {
-  d3.select("#graphLine")
+  if(d3.select("#graph1").style("opacity") > 0)
+    d3.select("#graphLine")
       .classed("hidden", false);
 }
 
@@ -1246,6 +1304,9 @@ var graphHoverRectangle2 = d3.select("#graphLine").append("svg:rect").attr("clas
 
 
 function graphMove() {
+  if(d3.select("#graph1").style("opacity") == 0)
+    return;
+
   var m = d3.mouse(this),
    thisYear = Math.floor(graphs.xScale.invert(m[0]));
   var bounds = [
