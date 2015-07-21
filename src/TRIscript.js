@@ -156,7 +156,7 @@ var compareList = {
 
 // Zoom behavior
 var zoom = d3.behavior.zoom()
-    .scaleExtent([0.75,100])
+    .scaleExtent([0.5,100])
     .x(x_scale)
     .y(y_scale)
     .on("zoom", zoomHandler)
@@ -181,8 +181,8 @@ var color = d3.scale.quantize()
 
 // ALBERSUSA projection function
 var projection = d3.geo.albersUsa()
-    .scale(1500)
-    .translate([width / 2, height / 2]); //###
+    .scale(1100)
+    .translate([width / 2, (height / 2) - 150]); //###
 
 // Path global
 var path = d3.geo.path()
@@ -297,40 +297,14 @@ function reorderLayers() {
 /////////////////////////////////////////////////////////////////////////////
 
 function zoomstart() {
-//    console.log("zoomstart");
-     if (toolContext == ("brush") && event.shiftKey)
-         d3.select("#graph")
-            .style("opacity", 0);
-
      currentComparison = null;
+     fac.on("mouseover", null);
 }
 
 function zoomHandler() {
-
-    if (toolContext == ("brush") && event.shiftKey) {
-        d3.select(".brush")
-            .style("display", "block");
-        d3.select("#graphs")
-            .style("opacity", .85);
-        d3.select("#key")
-            .style("opacity", 1);
-        zoom.translate(translate);
-        zoom.scale(scaleFactor);
-    } else if(toolContext == ("brush")) {
-        d3.select(".brush")
-            .style("display", "none");
-
-        translate = d3.event.translate;
-        scaleFactor = d3.event.scale;
-    } else {
-        clearBrush();
-        translate = d3.event.translate;
-        scaleFactor = d3.event.scale;
-//        d3.select(".brush")
-//            .style("display", "none");
-//        brush.clear();
-    }
-
+    clearBrush();
+    translate = d3.event.translate;
+    scaleFactor = d3.event.scale;
 
     quadTreeLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
     usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
@@ -343,6 +317,8 @@ function zoomHandler() {
 function zoomend() {
     // Worth only updating facilityLayer for performance?
     //facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+
+    fac.on("mouseover", hover);
 
     if(toolContext == ("brush") && (!event || !event.shiftKey)) {
         clearEffects();
@@ -855,10 +831,11 @@ d3.select("#key")
     .style("opacity", 0);
 
 function brushstart() {
-//    console.log("brushstart");
+    //STOPS ZOOM EVENT ALONGSIDE BRUSH
+    d3.event.sourceEvent.stopPropagation();
     brushing = true;
 //    facilities.each(function(d) { d.scanned = d.selected = false; });
-    clearFacilities();
+    //clearFacilities();
 //    resetTotal();
 //    lineGraph(total);
 }
@@ -867,23 +844,27 @@ function brushstart() {
 function brush() {
     var extent = brush.extent();
     fac.each(function(d) { d.scanned = d.selected = false; });
+
+    if (extent[0][0] == extent[1][0] && extent[0][1] == extent[1][1])
+      return;   //if the extent is a single click, don't fade stuff
+
     search(quadtree, extent[0][0], extent[0][1], extent[1][0], extent[1][1]);
     fac.classed("brushed", function(d) { return d.selected; });
-    //fac.classed("fade", function(d) { return !d.selected; });
+    fac.classed("fade", function(d) { return !d.selected; });
 }
 
 function brushend() {
-
-    if(!event.shiftKey) {
-        brushing = false;
-        brush.clear();
-        usaLayer.moveToFront();
-        quadTreeLayer.moveToFront();
-        facilityLayer.moveToFront();
-        brushLayer.moveToFront();
-
-        return;
-    }
+    // TODO: remove this segment now that brushing prevents event default
+    // if(!event.shiftKey) {
+    //     brushing = false;
+    //     brush.clear();
+    //     usaLayer.moveToFront();
+    //     quadTreeLayer.moveToFront();
+    //     facilityLayer.moveToFront();
+    //     brushLayer.moveToFront();
+    //
+    //     return;
+    // }
 
     var these = d3.select(null);
     var extent = brush.extent();
@@ -919,6 +900,7 @@ function brushend() {
     });
 
     if(total.contains.length < 1) {
+        fac.classed("fade", false);
         resetTotal();
     }
 
@@ -952,13 +934,11 @@ function brushend() {
 
     lineGraph(total);
     showGraph(1);
+    // TODO: rather than a selection of brushed facilities, just pass brush extent and re-draw brush with that extent.
     currentComparison = new comparison( "Brushed Region", "brush", copyTotal(), brushedFac);
-    // compareList.add(new comparison( "Brushed Region", "brush", copyTotal(), brushedFac));
-    // updateList();
-    //console.log("brushend");
-    // TODO: try allowing brush region to be modified by commenting out lines below
+
     brushing = false;
-    brush.clear();
+
     usaLayer.moveToFront();
     quadTreeLayer.moveToFront();
     facilityLayer.moveToFront();
@@ -1256,7 +1236,8 @@ function graphHover() {
 }
 
 function graphOut() {
-  // console.log("out", event);
+  d3.select("#graphLine")
+      .classed("hidden", true);
 }
 
 // var graphHoverRectangle = d3.select("#graphs").append("path").attr("class", "area");
@@ -1273,12 +1254,12 @@ function graphMove() {
   ]
 
 
-  if(bounds[0]-15 != graphHoverRectangle.attr("x")) {
+  if(bounds[0] != graphHoverRectangle.attr("x")) {
 
     graphHoverRectangle
-        .attr("x", function() { return bounds[0]-15; })
+        .attr("x", function() { return bounds[0]; })
         .attr("y", 25)
-        .attr("width", 32)
+        .attr("width", bounds[1]-bounds[0])
         .attr("height", 150)
 
     //INFORMATION FROM LINEGRAPH hover
@@ -1304,7 +1285,7 @@ function graphMove() {
           .classed("hidden", false);
 
         graphHoverRectangle2
-            .attr("x", function() { return bounds[0]-15; })
+            .attr("x", function() { return bounds[0]; })
             .attr("y", 175)
             .attr("width", 32)
             .attr("height", 150)
