@@ -66,7 +66,7 @@ var toolContext = "select";                                                 // c
 var total = null; resetTotal();                                             // create and initialize total
 var width = window.innerWidth - 15,                                         // width and height values
     height = window.innerHeight - 15,
-    height1 = height - 300;
+    height1 = height - 330;
 var x_scale = d3.scale.linear().domain([0, width]).range([0, width]);       // X and Y scales for line chart
 var y_scale = d3.scale.linear().domain([0, height1]).range([0, height1]);   //
 var graph1, graph2;
@@ -1748,6 +1748,7 @@ function bindKeys() {
 //            console.log("ONE");
             popupTooltip("select");
             clearEffects();
+            fac.on("mouseover", hover);
             usaLayer.moveToFront();
             quadTreeLayer.moveToFront();
             facilityLayer.moveToFront();

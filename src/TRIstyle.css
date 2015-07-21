@@ -47,8 +47,6 @@ rect.area.hidden {
 
 #graphs {
     opacity: 1;
-    position: absolute;
-    top: 500px;
 }
 
 #graph1 {
@@ -56,7 +54,8 @@ rect.area.hidden {
 }
 
 #key {
-    position: absolute;
+    position: relative;
+    height: 20px;
     top: 10px;
     left: 400px;
     opacity: 0;
@@ -83,26 +82,6 @@ rect.area.hidden {
 
 .clickThrough {
     pointer-events: none;
-}
-
-.info1 {
-  min-width: 100%;
-  position: absolute;
-  bottom: 0;
-}
-
-.info2 {
-  top:33%;
-  min-width: 100%;
-  position: absolute;
-  bottom: 0;
-}
-
-.info3 {
-  top: 66%;
-  min-width: 100%;
-  position: absolute;
-  bottom: 0;
 }
 
 .feature {
@@ -144,11 +123,6 @@ rect.area.hidden {
     max-width:300px;
     padding: 15px;
     border-radius: 5px;
-/*
-    border-left: 2px solid black;
-    border-top: 2px solid black;
-    border-right: 2px solid black;
-*/
     border-right: 2px solid black;
     border-bottom: 2px solid black;
     background-color: lightslategrey;
@@ -176,13 +150,6 @@ rect.area.hidden {
     pointer-events: none;
 }
 
-#pCoord {
-    position: absolute;
-    left: 50px;
-    width: 85%;
-    height: 175px;
-}
-
 #list {
     float:left;
     max-width: 50px;
@@ -196,11 +163,10 @@ rect.area.hidden {
 }
 
 .listEleCurr {
+    fill: skyblue;
     stroke-width: 1.5px;
     stroke: black;
 }
-
-
 
 .keyElement {
     display: block;
