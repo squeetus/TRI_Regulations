@@ -198,7 +198,7 @@ var path = d3.geo.path()
 
 /////////////////////////////////////////////////////////////////////////////
 //
-//          T O O L T I P
+//          T O O L T I P S
 //
 /////////////////////////////////////////////////////////////////////////////
 
@@ -210,6 +210,85 @@ var tooltip = d3.select('#tooltip')
 function popupTooltip(message) {
     tooltip.text(message);
     tooltip.transition().delay(50).style('opacity', 0.9).duration(300).transition().delay(1500).style('opacity', 0.0).duration(750);
+}
+
+var options = [
+  {"name": "releases", "color": "red"},
+  {"name": "recycling", "color": "green"},
+  {"name": "treatment", "color": "purple"},
+  {"name": "recovery", "color": "blue"}
+]
+
+var explorationTools = d3.select("#explorationTools").append("svg").selectAll(".toggleButtons")
+    .data(options)
+  .enter().append('svg:g').on("click", function(d, i) {
+      return buttonClick(d, i);
+  });;
+
+var RECTY = explorationTools
+      .append('rect')
+      .attr("x", 20)
+      .attr("y", 50)
+      .attr("rx", 2)
+      .attr("ry", 2)
+      .attr("width", 0)
+      .attr("height", 0)
+      .style("fill", function(d, i) {
+          if(d.color)
+            return d.color;
+          else
+            return "black";
+      });
+
+
+var TEXTS = explorationTools
+    .append("text")
+        //.attr("class", "y label")
+        //.attr("text-anchor", "end")
+
+        .attr("x", 10)
+        .attr("y", function(d, i) {
+          return 25 + i * 22;
+        })
+
+        .text("");
+
+d3.select("#explorationToggle").on("click", toggleExplorationTab);
+
+function buttonClick(d, i) {
+  generateStateColors(d.name);
+}
+
+// Toggles the exploration tab on the left-hand side
+function toggleExplorationTab() {
+  if(RECTY[0][0].y.animVal.value >= 50) {
+    RECTY
+        .transition().duration(500)
+        .attr("width", 20)
+        .attr("height", 20)
+        .attr("y", function(d,i) { return 10 + i * 22; });
+
+    TEXTS
+        .transition().duration(500).delay(350)
+        .attr("x", 50)
+        .text(function(d, i) {
+          return d.name;
+        })
+        .attr("opacity", 1);
+    } else {
+      RECTY
+          .transition().duration(500)
+          .attr("width", 0)
+          .attr("height", 0)
+          .attr("y", 50)
+          .attr("x", 20);
+
+      TEXTS
+          .transition().duration(500)
+          .attr("x", 10)
+          .attr("opacity", 0)
+
+    }
 }
 
 
@@ -370,6 +449,96 @@ d3.json("data/us.json", function(error, us) {
       .attr("stroke-width", strokeWidth*2);
 
 });
+
+function generateStateColors(argument) {
+  var stateDomain = [];
+  var tmp = [];
+  for(state in stateRatios) {
+      //calculate ratios based on criteria
+      switch(argument) {
+        case "ratios":
+        case 0:
+          //Pure ratio: releases / total;
+          stateRatios[state].comparison = stateRatios[state].ratio;
+          stateColor.range(colorbrewer.RdYlGn[9]);
+          stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+          break;
+        case "releases":
+        case 1:
+          // Release value
+          stateRatios[state].comparison = stateRatios[state].totalRelease;
+          stateDomain.push(stateRatios[state].comparison);
+          stateColor.range(colorbrewer.Reds[9]);
+          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+          break;
+        case "recycling":
+        case 2:
+          // Recycling value
+          stateRatios[state].comparison = stateRatios[state].totalRecycling / stateRatios[state].numFacilities;
+          stateDomain.push(stateRatios[state].comparison);
+          stateColor.range(colorbrewer.Greens[9]);
+          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+          break;
+        case "treatment":
+        case 3:
+          // Treatment value
+          stateRatios[state].comparison = stateRatios[state].totalTreatment / stateRatios[state].numFacilities;
+          stateDomain.push(stateRatios[state].comparison);
+          stateColor.range(colorbrewer.Purples[9]);
+          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+          break;
+        case "recovery":
+        case 4:
+          // Recycling value
+          stateRatios[state].comparison = stateRatios[state].totalRecovery / stateRatios[state].numFacilities;
+          stateDomain.push(stateRatios[state].comparison);
+
+          stateColor.range(colorbrewer.Blues[9]);
+          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+          break;
+
+
+      }
+
+
+
+
+
+
+
+
+      //console.log(stateRatios[state].comparison);
+
+
+      // tmp.push({"state": state, "ratio": stateRatios[state].ratio});
+      tmp.push([state, stateRatios[state].comparison]);
+      //tmp.push(stateRatios[state].numFacilities);
+  }
+
+  // Sort array of states based on ratio (to determine outliers)
+  tmp.sort(function(a,b) {
+    if(a.comparison && b.comparison) {
+        return a.comparison - b.comparison;
+    }
+  });
+
+  console.log(tmp);
+
+  // If you want to set an upper bound for ratios based on a value
+  //var upperBound = (d3.max(stateDomain) > 0.75) ? 0.75 : d3.max(stateDomain);
+  //stateColor.domain([upperBound, d3.mean(stateDomain), d3.min(stateDomain)]);
+
+  // Set up the domain based on raw values of ratio domain
+
+
+  states.style("fill", function(d) {
+      if (stateRatios[d.id])
+        return stateColor(stateRatios[d.id].comparison);
+      else {
+        return "tan";
+      }
+  });
+}
 
 
 function clickedState(d) {
@@ -624,11 +793,11 @@ d3.json("data/facilities.json", function(error, f) {
     if(error)
         console.log(error);
 
+    stateRatios = {};
+
     var arr = [];
     var x, y, s;
     var domain = [];
-    var stateDomain = [];
-    stateRatios = {};
     var flag = true;
     var totalRelease, totalTreatment, totalRecycling, totalRecovery, totals;
 
@@ -688,30 +857,9 @@ d3.json("data/facilities.json", function(error, f) {
         }
     }
 
-    var tmp = []; // tmp!!! number of facs in each state
-    for(state in stateRatios) {
-        stateDomain.push(stateRatios[state].ratio);
-        //tmp.push({"state": state, "numFac": stateRatios[state].numFacilities});
-        tmp.push(stateRatios[state].numFacilities);
-    }
-
-    //console.log(tmp);
-    console.log(stateRatios[2]);
-    console.log(stateDomain.sort());
-    console.log(d3.max(stateDomain), d3.min(stateDomain), d3.mean(stateDomain), d3.median(stateDomain), d3.extent(stateDomain));
-    //console.log(stateDomain;
-
-    stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+    generateStateColors();
+    // Set up colors for facilities
     color.domain([d3.max(domain), d3.mean(domain), d3.min(domain)]);
-
-    states.style("fill", function(d) {
-        if (stateRatios[d.id])
-          return stateColor(stateRatios[d.id].ratio);
-        else {
-          return "tan";
-        }
-    });
-
     quadtree = quadtree(arr);
 
     quadTreeLayer = usaLayer.selectAll(".node")
@@ -1770,8 +1918,6 @@ function init() {
 
     graphs = initializeLineGraphs();
     hideGraph();
-
-
 }
 
 
@@ -1856,11 +2002,8 @@ function bindKeys() {
 
         // FIVE
         if ( d3.event.keyCode === 53) {
-            console.log(currentComparison, compareList.data);
-            // resetTotal()
-            // lineGraph(total, 1);
-            // lineGraph(total, 2);
-            // hideGraph(1);
+            //console.log(currentComparison, compareList.data);
+            toggleExplorationTab();
         }
     });
 }

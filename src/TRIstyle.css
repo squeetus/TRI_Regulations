@@ -32,6 +32,34 @@ rect.area.hidden {
     border-radius: 5px;
 }
 
+#auxiliaryInfoTab {
+
+}
+
+#explorationTools {
+    position: fixed;
+    top: 15%;
+    left: 10px;
+    /*height: 100px*/
+    width: 50px;
+    /*border: solid 2px black;*/
+}
+
+#explorationToggle {
+      background-color: grey;
+      border-radius: 5px;
+      color: grey;
+      width: 1vw;
+      height: 5vw;
+      position: relative;
+      top: 100px;
+}
+
+.toggleButton {
+    fill: pink;
+
+}
+
 #map {
     border-radius: 5px;
     z-index: -100;
@@ -236,7 +264,7 @@ div.no_selection {
 }
 
 .fade {
-    opacity: .5;
+    opacity: .4;
 }
 
 .facility.fade {
