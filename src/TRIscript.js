@@ -438,7 +438,8 @@ function brushColorOverlay(domain) {
         .data(scaleLocations)
       .enter().append("rect")
         .attr("opacity", 0.8)
-        .attr("y", 5)
+        .attr("stroke", "lightgrey")
+        .attr("y", 0)
         .attr("height", 10)
         .attr("width", step)
         .attr("x", function(d,i) {
@@ -448,6 +449,30 @@ function brushColorOverlay(domain) {
         .style("fill", function(d,i) {
           return myColor(i);
         });
+
+    thisG.append("rect")
+      .attr("opacity", 0.8)
+      .attr("stroke", "lightgrey")
+      .attr("y", 0)
+      .attr("height", 10)
+      .attr("width", function() {
+          return x(lower) - 10;
+      })
+      .attr("x", 10)
+      .style("fill", myColor(0));
+
+    thisG.append("rect")
+      .attr("opacity", 0.8)
+      .attr("stroke", "lightgrey")
+      .attr("y", 0)
+      .attr("height", 10)
+      .attr("width", function() {
+          return 180 - x(upper);
+      })
+      .attr("x", x(upper))
+      .style("fill", myColor(9));
+
+    console.log(x(lower), x(upper));
 }
 
 function exploreBrush() {
