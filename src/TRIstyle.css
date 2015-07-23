@@ -36,13 +36,25 @@ rect.area.hidden {
 
 }
 
-#explorationTools {
-    position: fixed;
-    top: 15%;
-    left: 10px;
-    /*height: 100px*/
-    width: 50px;
-    /*border: solid 2px black;*/
+#explorationTools { // container div
+    /*left: -50;*/
+    top: 50px;
+    height: 0px;
+    width: 0px;
+    border-radius: 5px;
+    position: absolute;
+    pointer-events: none;
+    /*border: solid 3px darkgrey;*/
+
+}
+
+#explorationBackground {
+    background-color: linen;
+    border-radius: 5px;
+    opacity: 0.9;
+    width: 100%;
+    height: 100%;
+    position: absolute;
 }
 
 #explorationToggle {
@@ -52,7 +64,20 @@ rect.area.hidden {
       width: 1vw;
       height: 5vw;
       position: relative;
-      top: 100px;
+      top: 200px;
+      left: 10px;
+
+      -webkit-box-shadow:inset 0px 0px 0px 2px darkgrey;
+      -moz-box-shadow:inset 0px 0px 0px 2px darkgrey;
+      box-shadow:inset 0px 0px 0px 2px darkgrey;
+}
+
+.explorationContainer {
+  position: absolute;
+  z-index: 10;
+  pointer-events: all;
+  width: 100%;
+  height: 100%;
 }
 
 .toggleButton {
@@ -135,6 +160,8 @@ rect.area.hidden {
 #container {
     height:100vh;
     width: 100%;
+    position: relative;
+    overflow: hidden;
     background: url(http://mbostock.github.io/d3/talk/20111018/texture-noise.png);
 }
 
@@ -224,8 +251,8 @@ div.no_selection {
     -moz-user-select: none; /* mozilla browsers */
     -khtml-user-select: none; /* webkit (konqueror) browsers */
     -ms-user-select: none; /* IE10+ */
+    cursor: default;
 }
-
 
 
 .popupMessage {
@@ -264,7 +291,7 @@ div.no_selection {
 }
 
 .fade {
-    opacity: .4;
+    opacity: .2;
 }
 
 .facility.fade {
@@ -315,3 +342,12 @@ div.no_selection {
 .x .axis {
   stroke: black;
 }
+
+
+/**********************      Tooltips and Screen Regions       **********************/
+
+.overlayOptionButton {
+    opacity: 0.5;
+}
+
+/**********************      ===========================       **********************/

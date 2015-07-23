@@ -58,6 +58,7 @@ var nodeSize = 2;                                                           // b
 var strokeWidth = 0.5;                                                      // base stroke width for facilities
 var fac = null;                                                             // selection global for facilities
 var states = null;                                                          // selection global for states
+var counties = null;                                                        // seletion global for counties
 var stateRatios = {};                                                       // state ratios for coloring
 var stateLines = null;                                                      // size variable for stateLines
 var brushing = false;                                                       // is the user currently brushing (sentinel)
@@ -212,23 +213,71 @@ function popupTooltip(message) {
     tooltip.transition().delay(50).style('opacity', 0.9).duration(300).transition().delay(1500).style('opacity', 0.0).duration(750);
 }
 
-var options = [
-  {"name": "releases", "color": "red"},
-  {"name": "recycling", "color": "green"},
-  {"name": "treatment", "color": "purple"},
-  {"name": "recovery", "color": "blue"}
-]
+overlayExplorationOptions = {
+    "options": [
+      {"name": "(release / usage)", "color": "black", "toggled": false, "stackable": false},
+      {"name": "releases", "color": "red", "toggled": false, "stackable": true},
+      {"name": "recycling", "color": "green", "toggled": false, "stackable": true},
+      {"name": "treatment", "color": "purple", "toggled": false, "stackable": true},
+      {"name": "recovery", "color": "blue", "toggled": false, "stackable": true},
+      {"name": "(release - other 3)", "color": "darkgreen", "toggled": false, "stackable": false},
+      {"name": "none", "color": "tan", "toggled": false, "stackable": false}
+    ],
+    "toggle": function(id) {
+        for(option in this.options) {
+          if(this.options[option].name == id) {
+            if(this.options[option].stackable == false) {
+              var tmp = this.options[option].toggled;
+              this.unToggleAll();
+              this.options[option].toggled = (tmp) ? false : true;
+            } else {
+              this.options[option].toggled = (this.options[option].toggled) ? false : true;
+            }
+          } else {
+            if(!this.options[option].stackable)
+              this.options[option].toggled = false;
+          }
+        }
+        for(i in this.options) {
+          d3.select("#overlayButton" + i).style("opacity", this.options[i].toggled ? 1 : 0.5);
+        }
+        // console.log(this.options);
+    },
+    "unToggleAll": function() {   //Sets 'toggled' attribute to 'false' for all options
+        for(i in this.options) {
+          this.options[i].toggled = false;
+        }
+    }
+}
 
-var explorationTools = d3.select("#explorationTools").append("svg").selectAll(".toggleButtons")
-    .data(options)
-  .enter().append('svg:g').on("click", function(d, i) {
-      return buttonClick(d, i);
-  });;
+d3.select("#explorationTools")
+  .attr("showing", false)
 
-var RECTY = explorationTools
+function testClick() {
+  console.log("click");
+}
+
+function testDblClick() {
+  console.log("double click");
+}
+
+// console.log(d3.select("#explorationTools").attr("showing") == "false")
+var explorationTools = d3.select("#explorationTools").insert("svg", "#explorationBackground")
+      .classed("explorationContainer", true)
+      .attr("id", "overlayExplorationToolsSVG")
+    .selectAll(".toggleButtons")
+        .data(overlayExplorationOptions.options)
+      .enter().append('svg:g')
+        .classed("overlayOptionButton", true)
+        .attr("id", function(d, i) { return "overlayButton" + i; })
+        .on("click", function(d, i) {
+          return overlayButtonClick(d, i);
+        });
+
+var explorationToolIcons = explorationTools
       .append('rect')
-      .attr("x", 20)
-      .attr("y", 50)
+      .attr("x", 25)
+      .attr("y", 75)
       .attr("rx", 2)
       .attr("ry", 2)
       .attr("width", 0)
@@ -241,51 +290,103 @@ var RECTY = explorationTools
       });
 
 
-var TEXTS = explorationTools
+var explorationToolText = explorationTools
     .append("text")
         //.attr("class", "y label")
         //.attr("text-anchor", "end")
 
-        .attr("x", 10)
+        .attr("x", 20)
         .attr("y", function(d, i) {
           return 25 + i * 22;
         })
 
         .text("");
 
-d3.select("#explorationToggle").on("click", toggleExplorationTab);
+d3.select("#explorationToggle")
+  .on("mouseover", function() {
+      d3.select(this).transition().duration(150)
+          .style("background-color", "white");
+      return;
+  })
+  .on("mouseout", function() {
+      d3.select(this).transition().duration(150)
+          .style("background-color", "grey");
+      return;
+  })
+  .on("click", toggleExplorationTab)
+  .on("dblclick", function() {
+      d3.event.preventDefault(); return;
+  });
 
-function buttonClick(d, i) {
-  generateStateColors(d.name);
+function overlayButtonClick(d, i) {
+
+      // Toggle respective overlayExplorationOptionButton on or off
+      overlayExplorationOptions.toggle(d.name);
+      // d3.select("#overlayButton" + i).style("opacity", overlayExplorationOptions.options[i].toggled ? 1 : 0.5);
+      generateStateColors();
+
 }
 
 // Toggles the exploration tab on the left-hand side
 function toggleExplorationTab() {
-  if(RECTY[0][0].y.animVal.value >= 50) {
-    RECTY
-        .transition().duration(500)
+
+  if(d3.select("#explorationTools").attr("showing") == "false") {   // Transition in
+
+    d3.select("#explorationToggle").style("pointer-events", "none");
+
+    d3.select("#explorationTools")
+        .style("left", "25px")
+        .style("top", "225px")
+        .style("height", "5px")
+        .transition().duration(200)
+        .style("width", 200 + "px")
+        .transition().duration(350)
+        .style("top", "50px")
+        .style("height", 350 + "px")
+        .style("border", "solid 3px darkgrey")
+        .attr("showing", true);
+
+    d3.select("#explorationToggle").transition().delay(550).style("pointer-events", "all");
+
+    explorationToolIcons
+        .transition().duration(500).delay(500)
         .attr("width", 20)
         .attr("height", 20)
         .attr("y", function(d,i) { return 10 + i * 22; });
 
-    TEXTS
-        .transition().duration(500).delay(350)
+    explorationToolText
+        .transition().duration(500).delay(500)
         .attr("x", 50)
         .text(function(d, i) {
           return d.name;
         })
         .attr("opacity", 1);
-    } else {
-      RECTY
-          .transition().duration(500)
+
+    } else {  // Transition out
+
+      d3.select("#explorationToggle").style("pointer-events", "none");
+
+      d3.select("#explorationTools")//.select("svg")
+          .transition().duration(350)
+          .style("height", "5px")
+          .style("top", "225px")
+          .transition().duration(200)
+          .style("width", "0px")
+          .style("border", "solid 0px darkgrey")
+          .attr("showing", false);
+
+      d3.select("#explorationToggle").transition().delay(550).style("pointer-events", "all");
+
+      explorationToolIcons
+          //.transition().duration(500)
           .attr("width", 0)
           .attr("height", 0)
-          .attr("y", 50)
-          .attr("x", 20);
+          .attr("y", 75)
+          .attr("x", 25);
 
-      TEXTS
-          .transition().duration(500)
-          .attr("x", 10)
+      explorationToolText
+          //.transition().duration(500)
+          .attr("x", 25)
           .attr("opacity", 0)
 
     }
@@ -357,7 +458,7 @@ function reorderLayers() {
     brushLayer.moveToFront();
 }
 //
-//function scaleTranslateLayers(scale, trans) {
+// function scaleTranslateLayers(scale, trans) {
 //      usaLayer.transition()
 //      .duration(150)
 //      .style("stroke-width", 1.5 / scale + "px")
@@ -370,7 +471,11 @@ function reorderLayers() {
 //      .duration(750)
 //      .style("stroke-width", 1.5 / scale + "px")
 //      .attr("transform", "translate(" + trans + ")scale(" + scale + ")");
-//}
+//    facilityLayer.transition()
+//        .duration(750)
+//        .style("stroke-width", 1.5 / scale + "px")
+//        .attr("transform", "translate(" + trans + ")scale(" + scale + ")");
+// }
 
 
 
@@ -383,6 +488,7 @@ function reorderLayers() {
 function zoomstart() {
      currentComparison = null;
      fac.on("mouseover", null);
+    // counties.attr("display", "none");
 }
 
 function zoomHandler() {
@@ -403,7 +509,7 @@ function zoomend() {
     //facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
 
     fac.on("mouseover", hover);
-
+    //counties.attr("display", "inline");
     if(toolContext == ("brush") && (!event || !event.shiftKey)) {
         clearEffects();
         currentComparison = null;
@@ -437,7 +543,7 @@ d3.json("data/us.json", function(error, us) {
 //        .on("dblclick", dblClickedState);
 
     //Counties
-    //    usaLayer.insert("path", ".graticule")
+    // counties = usaLayer.insert("path", ".graticule")
     //      .datum(topojson.mesh(us, us.objects.counties, function(a, b) { return a !== b && !(a.id / 1000 ^ b.id / 1000); }))
     //      .attr("class", "countyMesh")
     //      .attr("d", path);
@@ -451,93 +557,175 @@ d3.json("data/us.json", function(error, us) {
 });
 
 function generateStateColors(argument) {
-  var stateDomain = [];
-  var tmp = [];
-  for(state in stateRatios) {
-      //calculate ratios based on criteria
-      switch(argument) {
-        case "ratios":
-        case 0:
-          //Pure ratio: releases / total;
-          stateRatios[state].comparison = stateRatios[state].ratio;
-          stateColor.range(colorbrewer.RdYlGn[9]);
-          stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
-          break;
-        case "releases":
-        case 1:
-          // Release value
-          stateRatios[state].comparison = stateRatios[state].totalRelease;
-          stateDomain.push(stateRatios[state].comparison);
-          stateColor.range(colorbrewer.Reds[9]);
-          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
-          break;
-        case "recycling":
-        case 2:
-          // Recycling value
-          stateRatios[state].comparison = stateRatios[state].totalRecycling / stateRatios[state].numFacilities;
-          stateDomain.push(stateRatios[state].comparison);
-          stateColor.range(colorbrewer.Greens[9]);
-          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
-          break;
-        case "treatment":
-        case 3:
-          // Treatment value
-          stateRatios[state].comparison = stateRatios[state].totalTreatment / stateRatios[state].numFacilities;
-          stateDomain.push(stateRatios[state].comparison);
-          stateColor.range(colorbrewer.Purples[9]);
-          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
-          break;
-        case "recovery":
-        case 4:
-          // Recycling value
-          stateRatios[state].comparison = stateRatios[state].totalRecovery / stateRatios[state].numFacilities;
-          stateDomain.push(stateRatios[state].comparison);
 
-          stateColor.range(colorbrewer.Blues[9]);
-          stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
-          break;
-
-
-      }
-
-
-
-
-
-
-
-
-      //console.log(stateRatios[state].comparison);
-
-
-      // tmp.push({"state": state, "ratio": stateRatios[state].ratio});
-      tmp.push([state, stateRatios[state].comparison]);
-      //tmp.push(stateRatios[state].numFacilities);
+  var numToggled = 0;
+  var toggledIndex = null;
+  for(option in overlayExplorationOptions.options) {
+    if(overlayExplorationOptions.options[option].toggled) {
+      numToggled++;
+      toggledIndex = option;
+    }
   }
 
-  // Sort array of states based on ratio (to determine outliers)
-  tmp.sort(function(a,b) {
-    if(a.comparison && b.comparison) {
-        return a.comparison - b.comparison;
+  if(numToggled == 0) { // none toggled
+    states.style("fill", function(d) {
+        if (stateRatios[d.id])
+          return "tan";
+    });
+  } else if(numToggled == 1) { // only one toggled? easy choice
+    singleAttribute(toggledIndex);
+    //multiAttribute();
+  } else {  // more than one toggled
+    multiAttribute();
+  }
+
+  function multiAttribute() {
+    var stateDomain = [];
+    var tmp = [];
+    var on = {};
+
+    //determine which attributes are toggled on
+    for(opt in overlayExplorationOptions.options) {
+      // if(overlayExplorationOptions.options[opt].stackable)    // values with the potential to trigger multiAttribute
+      on[opt] = overlayExplorationOptions.options[opt].toggled;
     }
-  });
 
-  console.log(tmp);
+    //accumulate values for all toggled attributes
+    for(state in stateRatios) {
+      stateRatios[state].comparison = 0;
 
-  // If you want to set an upper bound for ratios based on a value
-  //var upperBound = (d3.max(stateDomain) > 0.75) ? 0.75 : d3.max(stateDomain);
-  //stateColor.domain([upperBound, d3.mean(stateDomain), d3.min(stateDomain)]);
+      if(on[1]) // releases
+        stateRatios[state].comparison += stateRatios[state].totalRelease;
+      if(on[2]) // recycling
+        stateRatios[state].comparison += stateRatios[state].totalRecycling;
+      if(on[3]) // treatment
+        stateRatios[state].comparison += stateRatios[state].totalTreatment;
+      if(on[4]) // recovery
+        stateRatios[state].comparison += stateRatios[state].totalRecovery;
 
-  // Set up the domain based on raw values of ratio domain
+      stateDomain.push(stateRatios[state].comparison);
+    }
 
+    //set up color scale
+    stateColor.range(colorbrewer.Greys[9]);
+    stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+    applyStateColors();
 
-  states.style("fill", function(d) {
-      if (stateRatios[d.id])
-        return stateColor(stateRatios[d.id].comparison);
-      else {
-        return "tan";
+  }
+
+  function singleAttribute(arg) {
+
+    arg = parseInt(arg);
+    var stateDomain = [];
+    var tmp = [];
+
+    for(state in stateRatios) {
+        //calculate comparison value based on criteria
+        switch(arg) {
+          case "ratio":
+          case 0:   //Pure ratio: releases / total;
+            stateRatios[state].comparison = stateRatios[state].ratio;
+            stateDomain.push(stateRatios[state].comparison);
+            break;
+          case "releases":
+          case 1:   // Release value
+            stateRatios[state].comparison = stateRatios[state].totalRelease;// / stateRatios[state].numFacilities;
+            stateDomain.push(stateRatios[state].comparison);
+            break;
+          case "recycling":
+          case 2:   // Recycling value
+            stateRatios[state].comparison = stateRatios[state].totalRecycling;// / stateRatios[state].numFacilities;
+            stateDomain.push(stateRatios[state].comparison);
+            break;
+          case "treatment":
+          case 3:   // Treatment value
+            stateRatios[state].comparison = stateRatios[state].totalTreatment;// / stateRatios[state].numFacilities;
+            stateDomain.push(stateRatios[state].comparison);
+            break;
+          case "recovery":
+          case 4:   // Recycling value
+            stateRatios[state].comparison = stateRatios[state].totalRecovery;// / stateRatios[state].numFacilities;
+            stateDomain.push(stateRatios[state].comparison);
+            break;
+          case 5:   // Recycling value
+            stateRatios[state].comparison = stateRatios[state].totalRecovery - (stateRatios[state].totalRecycling + stateRatios[state].totalTreatment + stateRatios[state].totalRecovery);// / stateRatios[state].numFacilities;
+            stateDomain.push(stateRatios[state].comparison);
+            break;
+        }
+
+          tmp.push([state, stateRatios[state].comparison]);
+          //tmp.push(stateRatios[state].numFacilities);
       }
-  });
+
+    switch(arg) {
+      case "ratio":
+      case 0:     //Pure ratio: releases / total;
+        stateColor.range(colorbrewer.RdYlGn[9]);
+        stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+        applyStateColors();
+        break;
+      case "releases":
+      case 1:   // Release value
+        stateColor.range(colorbrewer.Reds[9]);
+        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        applyStateColors();
+        break;
+      case "recycling":
+      case 2:   // Recycling value
+        stateColor.range(colorbrewer.Greens[9]);
+        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        applyStateColors();
+        break;
+      case "treatment":
+      case 3:   // Treatment value
+        stateColor.range(colorbrewer.Purples[9]);
+        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        applyStateColors();
+        break;
+      case "recovery":
+      case 4:   // Recycling value
+        stateColor.range(colorbrewer.Blues[9]);
+        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        applyStateColors();
+        break;
+      case 5:   // Difference between release and all the rest
+        stateColor.range(colorbrewer.BuPu[9]);
+        stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+        applyStateColors();
+        break;
+      case "none":
+      case 6:   // Reset state color
+        applyStateColors(1);
+        break;
+    }
+
+    // Sort array of states based on ratio (to determine outliers)
+    tmp.sort(function(a,b) {
+      if(a.comparison && b.comparison) {
+          return a.comparison - b.comparison;
+      }
+    });
+
+    // If you want to set an upper bound for ratios based on a value
+    //var upperBound = (d3.max(stateDomain) > 0.75) ? 0.75 : d3.max(stateDomain);
+    //stateColor.domain([upperBound, d3.mean(stateDomain), d3.min(stateDomain)]);
+
+  }
+}
+
+// Color all states based on their 'comparison' variable
+function applyStateColors(arg) {
+  if(!arg) {
+    states.style("fill", function(d) {
+        if (stateRatios[d.id])
+          return stateColor(stateRatios[d.id].comparison);
+        else {
+          return "tan";
+        }
+    });
+  } else {
+    states.style("fill", null);
+  }
 }
 
 
@@ -550,15 +738,16 @@ function clickedState(d) {
 
 
     // SCALE TO BOUNDING BOX?
-//     var bounds = path.bounds(d),
-//      dx = bounds[1][0] - bounds[0][0],
-//      dy = bounds[1][1] - bounds[0][1],
-//      x = (bounds[0][0] + bounds[1][0]) / 2,
-//      y = (bounds[0][1] + bounds[1][1]) / 2,
-//      scaleFactor = .9 / Math.max(dx / width, dy / height),
-//      translate = [width / 2 - scaleFactor * x, height / 2 - scaleFactor * y];
-////
-      //  scaleTranslateLayers(scaleFactor, translate);
+    //  var bounds = path.bounds(d),
+    //   dx = bounds[1][0] - bounds[0][0],
+    //   dy = bounds[1][1] - bounds[0][1],
+    //   x = (bounds[0][0] + bounds[1][0]) / 2,
+    //   y = (bounds[0][1] + bounds[1][1]) / 2,
+    //   scale = .9 / Math.max(dx / width, dy / height),
+    //   trans = [width / 2 - scale * x, height / 2 - scale * y];
+     //
+    //   // console.log(scaleFactor, translate);////
+    //   scaleTranslateLayers(scale, trans);
 }
 
 //function dblClickedState(d) {
