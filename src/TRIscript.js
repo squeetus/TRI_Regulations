@@ -671,7 +671,10 @@ function zoomHandler() {
     fac.attr("r", nodeSize/scaleFactor );
     fac.attr("stroke-width", strokeWidth/scaleFactor);
     stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
-    states.attr("stroke-width", (strokeWidth*2)/scaleFactor);
+    states.attr("stroke-width", function(d) {
+      return (strokeWidth*2)/scaleFactor;
+      //TODO: scale this depending on whether a state is highlighted
+    });
 }
 
 function zoomend() {
@@ -968,6 +971,8 @@ function highlightState(d) {
         fac.classed("clickThrough", false);
         resetTotal();
         states.classed("fade", false);
+        states.classed("highlight", false)
+          .attr("stroke-width", strokeWidth);
         fac.classed("fade", function(d) { d.state == thisState ? false : true; });
         fac.classed("selected", function(d) { d.state == thisState ?  true : false; });
         fac.each(function(d, i) { if(d.state == thisState) {removeFacilityFromTotal(d, i); } });
@@ -1033,6 +1038,8 @@ function highlightState(d) {
         // console.log(selectedStates.array);
 
         states.classed("fade", function(d) { return d.id != thisState;  });
+        states.classed("highlight", function(d) { return d.id == thisState; })
+          .attr("stroke-width", function(d) { return (d.id == thisState) ? (strokeWidth * 10)/scaleFactor : strokeWidth; });
         fac.classed("fade", function(d) { return d.state != thisState; });
         fac.classed("selected", function(d) { return d.state == thisState; });
         fac.each(function(d, i) { if(d.state == thisState) {addFacilityToTotal(d, i); } });
@@ -1061,6 +1068,8 @@ function addState(d) {
           fac.classed("clickThrough", false);
           // console.log("LAST STATE, NO FADE");
           states.classed("fade", false);
+          states.classed("highlight", false)
+            .attr("stroke-width", strokeWidth);
           fac.classed("fade", false);
           fac.classed("selected", false);
           selectedState = null;
@@ -1079,6 +1088,8 @@ function addState(d) {
         } else {
           // console.log("STILL STATES..", selectedStates.array);
           states.classed("fade", function(d) { return !selectedStates.contains(d.id); });
+          states.classed("highlight", function(d) { return selectedStates.contains(d.id); })
+            .attr("stroke-width", function(d) { return selectedStates.contains(d.id) ? (strokeWidth * 10)/scaleFactor : strokeWidth; });
           fac.classed("fade", function(d) { return !selectedStates.contains(d.state); });
           fac.classed("selected", function(d) { return selectedStates.contains(d.state); });
           fac.each(function(d, i) { if(d.state == thisState) { removeFacilityFromTotal(d, i); } });
@@ -1135,7 +1146,8 @@ function addState(d) {
         fac.classed("clickThrough", true);
         selectedStates.add(thisState);
         // console.log("adding.. ", thisState, selectedStates.array);
-
+        states.classed("highlight", function(d) { return selectedStates.contains(d.id); })
+          .attr("stroke-width", function(d) { return selectedStates.contains(d.id) ? (strokeWidth * 10)/scaleFactor : strokeWidth; });
         states.classed("fade", function(d) { return !selectedStates.contains(d.id);  });
         fac.classed("fade", function(d) { return !selectedStates.contains(d.state); });
         fac.classed("selected", function(d) { return selectedStates.contains(d.state); });

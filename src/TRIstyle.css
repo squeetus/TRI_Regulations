@@ -150,6 +150,10 @@ rect.area.hidden {
 
 }
 
+.feature.highlight {
+  stroke: orange;
+}
+
 .feature.active {
   fill: orange;
 }
