@@ -284,12 +284,12 @@ var explorationTools = d3.select("#explorationTools").insert("svg", "#exploratio
   d3.select("#overlayExplorationToolsSVG")
       .append("text")
       .attr("y", 15)
-      .attr("x", 25)
+      .attr("x", 40)
       .text("State Overlay Options");
 
 var explorationToolIcons = explorationTools
       .append('rect')
-      .attr("x", 25)
+      .attr("x", 45)
       .attr("y", 75)
       .attr("rx", 2)
       .attr("ry", 2)
@@ -308,7 +308,7 @@ var explorationToolText = explorationTools
         //.attr("class", "y label")
         //.attr("text-anchor", "end")
 
-        .attr("x", 20)
+        .attr("x", 40)
         .attr("y", function(d, i) {
           return 38 + i * 22;
         })
@@ -495,7 +495,7 @@ function toggleExplorationTab() {
     // d3.select("#explorationToggle").style("pointer-events", "none");
 
     d3.select("#explorationTools")
-        .style("left", "25px")
+        .style("left", "45px")
         .style("top", "225px")
         .style("height", "5px")
         .transition("fadeIn").duration(100)
@@ -516,7 +516,7 @@ function toggleExplorationTab() {
 
     explorationToolText
         .transition("fadeIn").duration(500).delay(500)
-        .attr("x", 50)
+        .attr("x", 70)
         .attr("y", function(d,i) { return 38 + i * 22; })
         .text(function(d, i) {
           return d.name;
@@ -548,11 +548,11 @@ function toggleExplorationTab() {
           .attr("width", 0)
           .attr("height", 0)
           .attr("y", 75)
-          .attr("x", 25);
+          .attr("x", 45);
 
       explorationToolText
           //.transition().duration(500)
-          .attr("x", 25)
+          .attr("x", 45)
           .attr("opacity", 0)
 
         setTimeout(function () {
