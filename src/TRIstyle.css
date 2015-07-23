@@ -142,6 +142,7 @@ rect.area.hidden {
 
 .feature {
   fill: tan;
+  stroke: darkgrey;
   //cursor: pointer;
 
 }

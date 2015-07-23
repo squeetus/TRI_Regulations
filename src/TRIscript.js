@@ -213,6 +213,12 @@ function popupTooltip(message) {
     tooltip.transition().delay(50).style('opacity', 0.9).duration(300).transition().delay(1500).style('opacity', 0.0).duration(750);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+//
+//          O V E R L A Y   O P T I O N S
+//
+/////////////////////////////////////////////////////////////////////////////
+
 overlayExplorationOptions = {
     "options": [
       {"name": "(release / usage)", "color": "black", "toggled": false, "stackable": false},
@@ -247,19 +253,19 @@ overlayExplorationOptions = {
         for(i in this.options) {
           this.options[i].toggled = false;
         }
+    },
+    "reverse": function() {     // returns whether the domain of the current option should be backward
+        if(this.options[0].toggled || this.options[5].toggled)
+          return true;
+        else {
+          return false;
+        }
+
     }
 }
 
 d3.select("#explorationTools")
   .attr("showing", false)
-
-function testClick() {
-  console.log("click");
-}
-
-function testDblClick() {
-  console.log("double click");
-}
 
 // console.log(d3.select("#explorationTools").attr("showing") == "false")
 var explorationTools = d3.select("#explorationTools").insert("svg", "#explorationBackground")
@@ -415,10 +421,16 @@ function brushColorOverlay(domain) {
     difference = x(upper)-x(lower),
     step = difference/9;
     var scaleLocations = d3.range(x(lower), x(upper), step);
-
+    if(scaleLocations.length > 9)
+      scaleLocations = scaleLocations.slice(0, 9);
     var myColor = d3.scale.quantize()
-        .range(colorbrewer.Reds[9])
-        .domain([0, 9]);
+        .range(stateColor.range());
+
+    if(overlayExplorationOptions.reverse())
+        myColor.domain([8, 0]);
+    else
+        myColor.domain([0, 8]);
+
     //bind this scale to g of rectangles over brush
     var thisG = d3.select("#explorationSVG2").append("g")
           .attr("id", "colorOverlayG");
@@ -427,9 +439,10 @@ function brushColorOverlay(domain) {
       .enter().append("rect")
         .attr("opacity", 0.8)
         .attr("y", 5)
-        .attr("height", 20)
+        .attr("height", 10)
         .attr("width", step)
         .attr("x", function(d,i) {
+
           return x(lower) + i * step;
         })
         .style("fill", function(d,i) {
@@ -633,6 +646,7 @@ function zoomHandler() {
     fac.attr("r", nodeSize/scaleFactor );
     fac.attr("stroke-width", strokeWidth/scaleFactor);
     stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
+    states.attr("stroke-width", (strokeWidth*2)/scaleFactor);
 }
 
 function zoomend() {
@@ -1377,6 +1391,7 @@ var brush = d3.svg.brush()
     .on("brushend", brushend);
 
 var brushLayer = svg.append("g")
+    .attr("id", "mapBrush")
     .attr("class", "brush")
     .call(brush);
 
@@ -1507,10 +1522,9 @@ function brushend() {
 
 
 function clearBrush() {
-//    console.log("clearing brush");
-    d3.select(".brush")
+    d3.select("#mapBrush")
         .style("display", "none");
-    d3.selectAll(".brush").call(brush.clear());
+    d3.select("#mapBrush").call(brush.clear());
     fac.each(function(d) { d.scanned = d.selected = false; });
 //    fac.classed("fade", function(d) { return !d.selected; } );
     fac.classed("brushed", function(d) { return d.selected; } );
@@ -2334,8 +2348,8 @@ function bindKeys() {
             popupTooltip("brush");
             clearEffects();
             brushLayer.moveToFront();
-            d3.selectAll(".brush").call(brush.clear());
-            d3.select(".brush")
+            d3.selectAll("#mapBrush").call(brush.clear());
+            d3.select("#mapBrush")
                 .style("display", "block");
             toolContext = "brush";
         }
