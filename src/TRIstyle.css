@@ -63,7 +63,7 @@ rect.area.hidden {
       color: grey;
       width: 1vw;
       height: 5vw;
-      position: relative;
+      position: absolute;
       top: 200px;
       left: 10px;
 
@@ -96,8 +96,11 @@ rect.area.hidden {
 }
 
 #map {
+    /*position: fixed;*/
+    /*top: 10px;*/
     border-radius: 5px;
-    z-index: -100;
+    /*z-index: -1;*/
+    /*border: solid 2px black;*/
 }
 
 
@@ -113,7 +116,7 @@ rect.area.hidden {
     position: relative;
     height: 20px;
     top: 10px;
-    left: 400px;
+    left: 200px;
     opacity: 0;
     width: 600px;
 }
@@ -286,8 +289,12 @@ div.no_selection {
 #title {
     position: absolute;
     width:100%;
+    top: -15px;
+    height: 60px;
     text-align: center;
     pointer-events: none;
+    /*border-bottom: solid 1px grey;*/
+    overflow-x: hidden;
 }
 
 .brush .extent {
