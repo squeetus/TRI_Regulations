@@ -43,7 +43,7 @@ rect.area.hidden {
     width: 0px;
     border-radius: 5px;
     position: absolute;
-    pointer-events: none;
+    pointer-events: all;
     /*border: solid 3px darkgrey;*/
 
 }
@@ -72,13 +72,23 @@ rect.area.hidden {
       box-shadow:inset 0px 0px 0px 2px darkgrey;
 }
 
-.explorationContainer {
+.explorationSVG1 {
   position: absolute;
   z-index: 10;
   pointer-events: all;
   width: 100%;
-  height: 100%;
+  height: 50%;
 }
+
+.explorationSVG2 {
+  position: absolute;
+  z-index: 10;
+  pointer-events: all;
+  top: 60%;
+  width: 100%;
+  height: 15%;
+}
+
 
 .toggleButton {
     fill: pink;
@@ -285,6 +295,10 @@ div.no_selection {
   shape-rendering: crispEdges;
 }
 
+.brushColorOverlay {
+  opacity: 0.1;
+}
+
 .brushed {
   fill: white;
 /*  opacity: .5;*/
@@ -334,7 +348,7 @@ div.no_selection {
 .axis path,
 .axis line {
     fill: none;
-    stroke: #ccc;
+    stroke: #000;
     stroke-width: 1;
     shape-rendering: crispEdges;
 }

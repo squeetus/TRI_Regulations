@@ -263,8 +263,9 @@ function testDblClick() {
 
 // console.log(d3.select("#explorationTools").attr("showing") == "false")
 var explorationTools = d3.select("#explorationTools").insert("svg", "#explorationBackground")
-      .classed("explorationContainer", true)
+      .classed("explorationSVG1", true)
       .attr("id", "overlayExplorationToolsSVG")
+
     .selectAll(".toggleButtons")
         .data(overlayExplorationOptions.options)
       .enter().append('svg:g')
@@ -273,6 +274,12 @@ var explorationTools = d3.select("#explorationTools").insert("svg", "#exploratio
         .on("click", function(d, i) {
           return overlayButtonClick(d, i);
         });
+
+  d3.select("#overlayExplorationToolsSVG")
+      .append("text")
+      .attr("y", 15)
+      .attr("x", 25)
+      .text("State Overlay Options");
 
 var explorationToolIcons = explorationTools
       .append('rect')
@@ -297,7 +304,7 @@ var explorationToolText = explorationTools
 
         .attr("x", 20)
         .attr("y", function(d, i) {
-          return 25 + i * 22;
+          return 38 + i * 22;
         })
 
         .text("");
@@ -313,69 +320,190 @@ d3.select("#explorationToggle")
           .style("background-color", "grey");
       return;
   })
-  .on("click", toggleExplorationTab)
+  .on("click", function() {
+    toggleExplorationTab();
+  })
   .on("dblclick", function() {
       d3.event.preventDefault(); return;
   });
+
+var x = d3.scale.linear()
+  .range([10, 180]);
+var brush1, brush2;
+brush1 = brush2 = null;
+
+var arc = d3.svg.arc()
+  .outerRadius(15 / 2)
+  .startAngle(0)
+  .endAngle(function(d, i) { return i ? -Math.PI : Math.PI; });
+
+d3.select("#explorationTools").insert("svg", "#explorationBackground")
+      .classed("explorationSVG2", true)
+      .attr("id", "explorationSVG2")
 
 function overlayButtonClick(d, i) {
 
       // Toggle respective overlayExplorationOptionButton on or off
       overlayExplorationOptions.toggle(d.name);
       // d3.select("#overlayButton" + i).style("opacity", overlayExplorationOptions.options[i].toggled ? 1 : 0.5);
-      generateStateColors();
+      var domain = generateStateColors();
 
+      if(domain) {
+        if(domain.length == 0) {
+          d3.select("#explorationSVG2").selectAll("*").remove();
+          return;
+        }
+
+        d3.select("#explorationSVG2").selectAll("*").remove();
+
+        var thisSVG = d3.select("#explorationSVG2");
+
+        x.domain(d3.extent(domain));
+
+        brush1 = d3.svg.brush()
+          .x(x)
+          .extent([d3.min(domain), d3.max(domain)])
+          // .on("brushstart", tmpstart)
+          .on("brush", exploreBrush)
+          .on("brushend", exploreBrushEnd);
+
+
+        thisSVG.append("g")
+          .attr("transform", "translate(0," + 15 + ")")
+          .attr("class", "x axis")
+          .call(d3.svg.axis().scale(x).ticks(3).tickSize(10).orient("bottom"))
+          .selectAll("text")
+            .attr("transform", function(d) {
+              return "rotate(15)";
+            });
+          // .tickFormat(d3.format("d"));
+
+        var brushg = thisSVG.append("g")
+          .attr("class", "brush")
+          .call(brush1);
+
+        brushg.selectAll(".resize").append("path")
+          .attr("transform", "translate(0," +  15 + ")")
+          .attr("d", arc);
+
+        brushg.selectAll("rect")
+          .attr("height", 20)
+          .attr("transform", "translate(0," +  5 + ")");
+
+        brushColorOverlay(domain);
+
+
+      } else {
+          d3.select("#explorationSVG2").selectAll("*").remove();
+      }
 }
+
+// function tmpstart() {
+//     console.log("start");
+// }
+//
+// function tmp() {
+//     console.log("brush");
+// }
+
+function brushColorOverlay(domain) {
+  d3.select("#colorOverlayG").remove();
+  // console.log(d3.selectAll("#colorOverlayG"));
+
+  var upper = d3.max(domain),
+    lower = d3.min(domain),
+    difference = x(upper)-x(lower),
+    step = difference/9;
+    var scaleLocations = d3.range(x(lower), x(upper), step);
+
+    var myColor = d3.scale.quantize()
+        .range(colorbrewer.Reds[9])
+        .domain([0, 9]);
+    //bind this scale to g of rectangles over brush
+    var thisG = d3.select("#explorationSVG2").append("g")
+          .attr("id", "colorOverlayG");
+    thisG.selectAll(".brushColorOverlay")
+        .data(scaleLocations)
+      .enter().append("rect")
+        .attr("opacity", 0.8)
+        .attr("y", 5)
+        .attr("height", 20)
+        .attr("width", step)
+        .attr("x", function(d,i) {
+          return x(lower) + i * step;
+        })
+        .style("fill", function(d,i) {
+          return myColor(i);
+        });
+}
+
+function exploreBrush() {
+    brushColorOverlay(brush1.extent());
+    generateStateColors(brush1.extent());
+}
+
+function exploreBrushEnd() {
+    // console.log(brush1.extent());
+    brushColorOverlay(brush1.extent());
+    generateStateColors(brush1.extent());
+}
+
 
 // Toggles the exploration tab on the left-hand side
 function toggleExplorationTab() {
 
   if(d3.select("#explorationTools").attr("showing") == "false") {   // Transition in
-
-    d3.select("#explorationToggle").style("pointer-events", "none");
+    transitioning = true;
+    // d3.select("#explorationToggle").style("pointer-events", "none");
 
     d3.select("#explorationTools")
         .style("left", "25px")
         .style("top", "225px")
         .style("height", "5px")
-        .transition().duration(200)
+        .transition("fadeIn").duration(100)
         .style("width", 200 + "px")
-        .transition().duration(350)
+        .transition("fadeIn").duration(250)
         .style("top", "50px")
         .style("height", 350 + "px")
         .style("border", "solid 3px darkgrey")
         .attr("showing", true);
 
-    d3.select("#explorationToggle").transition().delay(550).style("pointer-events", "all");
+    // d3.select("#explorationToggle").transition().delay(300).style("pointer-events", "all");
 
     explorationToolIcons
-        .transition().duration(500).delay(500)
+        .transition("fadeIn").duration(500).delay(500)
         .attr("width", 20)
         .attr("height", 20)
-        .attr("y", function(d,i) { return 10 + i * 22; });
+        .attr("y", function(d,i) { return 25 + i * 22; });
 
     explorationToolText
-        .transition().duration(500).delay(500)
+        .transition("fadeIn").duration(500).delay(500)
         .attr("x", 50)
+        .attr("y", function(d,i) { return 38 + i * 22; })
         .text(function(d, i) {
           return d.name;
         })
         .attr("opacity", 1);
 
-    } else {  // Transition out
+        setTimeout(function () {
+          transitioning = false;
+        }, 500);
 
-      d3.select("#explorationToggle").style("pointer-events", "none");
+    } else {  // Transition out
+      transitioning = true;
+
+      // d3.select("#explorationToggle").style("pointer-events", "none");
 
       d3.select("#explorationTools")//.select("svg")
-          .transition().duration(350)
+          .transition("fadeOut").duration(250)
           .style("height", "5px")
           .style("top", "225px")
-          .transition().duration(200)
+          .transition("fadeOut").duration(100)
           .style("width", "0px")
           .style("border", "solid 0px darkgrey")
           .attr("showing", false);
 
-      d3.select("#explorationToggle").transition().delay(550).style("pointer-events", "all");
+      // d3.select("#explorationToggle").transition().delay(300).style("pointer-events", "all");
 
       explorationToolIcons
           //.transition().duration(500)
@@ -389,6 +517,9 @@ function toggleExplorationTab() {
           .attr("x", 25)
           .attr("opacity", 0)
 
+        setTimeout(function () {
+          transitioning = false;
+        }, 500);
     }
 }
 
@@ -556,10 +687,12 @@ d3.json("data/us.json", function(error, us) {
 
 });
 
-function generateStateColors(argument) {
+function generateStateColors(fixedDomain) {
 
   var numToggled = 0;
   var toggledIndex = null;
+  var stateDomain = null;
+  var bounds = (fixedDomain) ? fixedDomain : [-Infinity,Infinity];
   for(option in overlayExplorationOptions.options) {
     if(overlayExplorationOptions.options[option].toggled) {
       numToggled++;
@@ -572,7 +705,7 @@ function generateStateColors(argument) {
         if (stateRatios[d.id])
           return "tan";
     });
-  } else if(numToggled == 1) { // only one toggled? easy choice
+  } else if(numToggled == 1) { // only one toggled? easy choice, allows us to easily assign color scale to each case
     singleAttribute(toggledIndex);
     //multiAttribute();
   } else {  // more than one toggled
@@ -580,7 +713,7 @@ function generateStateColors(argument) {
   }
 
   function multiAttribute() {
-    var stateDomain = [];
+    stateDomain = [];
     var tmp = [];
     var on = {};
 
@@ -606,17 +739,33 @@ function generateStateColors(argument) {
       stateDomain.push(stateRatios[state].comparison);
     }
 
+    var stateDomainMin = 0;
+    var stateDomainMax = 0;
+    var stateDomainMedian = 0;
+
+    for (value in stateDomain) {
+      if(stateDomain[value] < bounds[0])
+        stateDomain[value] = bounds[0];
+      else if(stateDomain[value] > bounds[1])
+        stateDomain[value] = bounds[1];
+    }
+
+    stateDomainMin = d3.min(stateDomain);
+    stateDomainMax = d3.max(stateDomain);
+    stateDomainMean = d3.median(stateDomain);
+
     //set up color scale
     stateColor.range(colorbrewer.Greys[9]);
-    stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+    stateColor.domain([stateDomainMin, stateDomainMax]);
     applyStateColors();
 
+    //TODO:
   }
 
   function singleAttribute(arg) {
 
     arg = parseInt(arg);
-    var stateDomain = [];
+    stateDomain = [];
     var tmp = [];
 
     for(state in stateRatios) {
@@ -624,6 +773,7 @@ function generateStateColors(argument) {
         switch(arg) {
           case "ratio":
           case 0:   //Pure ratio: releases / total;
+            // if(stateRatios[state].ratio >= )
             stateRatios[state].comparison = stateRatios[state].ratio;
             stateDomain.push(stateRatios[state].comparison);
             break;
@@ -657,40 +807,57 @@ function generateStateColors(argument) {
           //tmp.push(stateRatios[state].numFacilities);
       }
 
+    var colorDomainMax = 0;
+    var colorDomainMin = 0;
+    var stateDomainMin = 0;
+    var stateDomainMax = 0;
+    var stateDomainMedian = 0;
+
+    for (value in stateDomain) {
+      if(stateDomain[value] < bounds[0])
+        stateDomain[value] = bounds[0];
+      else if(stateDomain[value] > bounds[1])
+        stateDomain[value] = bounds[1];
+    }
+
+    stateDomainMin = d3.min(stateDomain);
+    stateDomainMax = d3.max(stateDomain);
+    stateDomainMean = d3.median(stateDomain);
+
     switch(arg) {
       case "ratio":
       case 0:     //Pure ratio: releases / total;
         stateColor.range(colorbrewer.RdYlGn[9]);
-        stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+        stateColor.domain([stateDomainMax, stateDomainMean, stateDomainMin]);
         applyStateColors();
         break;
       case "releases":
       case 1:   // Release value
         stateColor.range(colorbrewer.Reds[9]);
-        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        stateColor.domain([stateDomainMin, stateDomainMax]);
         applyStateColors();
         break;
       case "recycling":
       case 2:   // Recycling value
         stateColor.range(colorbrewer.Greens[9]);
-        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        stateColor.domain([stateDomainMin, stateDomainMax]);
         applyStateColors();
         break;
       case "treatment":
       case 3:   // Treatment value
         stateColor.range(colorbrewer.Purples[9]);
-        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        stateColor.domain([stateDomainMin, stateDomainMax]);
         applyStateColors();
         break;
       case "recovery":
       case 4:   // Recycling value
         stateColor.range(colorbrewer.Blues[9]);
-        stateColor.domain([d3.min(stateDomain), d3.max(stateDomain)]);
+        stateColor.domain([stateDomainMin, stateDomainMax]);
         applyStateColors();
         break;
       case 5:   // Difference between release and all the rest
         stateColor.range(colorbrewer.BuPu[9]);
-        stateColor.domain([d3.max(stateDomain), d3.mean(stateDomain), d3.min(stateDomain)]);
+        stateColor.domain([stateDomainMax, stateDomainMean, stateDomainMin]);
         applyStateColors();
         break;
       case "none":
@@ -706,12 +873,10 @@ function generateStateColors(argument) {
       }
     });
 
-    // If you want to set an upper bound for ratios based on a value
-    //var upperBound = (d3.max(stateDomain) > 0.75) ? 0.75 : d3.max(stateDomain);
-    //stateColor.domain([upperBound, d3.mean(stateDomain), d3.min(stateDomain)]);
-
+        // .attr("transform", "translate(0," +  5 + ")");
+    }
+    return stateDomain;
   }
-}
 
 // Color all states based on their 'comparison' variable
 function applyStateColors(arg) {
@@ -2086,6 +2251,17 @@ function clearEffects() {
     // d3.select("#graph")
     //     .style("opacity", 0);
 };
+
+function debounce(fn, delay) {
+  var timer = null;
+  return function () {
+    var context = this, args = arguments;
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      fn.apply(context, args);
+    }, delay);
+  };
+}
 
 
 
