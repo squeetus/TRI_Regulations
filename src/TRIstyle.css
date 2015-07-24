@@ -33,7 +33,22 @@ rect.area.hidden {
 }
 
 #auxiliaryInfoTab {
+    position: absolute;
+    left: 80%;
+    top: 100px;
+    width: 200px;
+    height: 200px;
+    border-radius: 5px;
+    border: solid 3px darkgrey;
+    font-size: 70%;
+    pointer-events: none;
+    opacity: 0;
+}
 
+.auxiliaryInfoSVG {
+    width: 100%;
+    height: 100%;
+    position: absolute;
 }
 
 #explorationTools { // container div
@@ -48,7 +63,7 @@ rect.area.hidden {
 
 }
 
-#explorationBackground {
+.explorationBackground {
     background-color: linen;
     border-radius: 5px;
     opacity: 0.9;
@@ -77,14 +92,14 @@ rect.area.hidden {
   z-index: 10;
   pointer-events: all;
   width: 100%;
-  height: 50%;
+  height: 60%;
 }
 
 .explorationSVG2 {
   position: absolute;
   z-index: 10;
   pointer-events: all;
-  top: 60%;
+  top: 66%;
   width: 100%;
   height: 15%;
 }

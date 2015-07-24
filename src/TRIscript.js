@@ -284,12 +284,12 @@ var explorationTools = d3.select("#explorationTools").insert("svg", "#exploratio
   d3.select("#overlayExplorationToolsSVG")
       .append("text")
       .attr("y", 15)
-      .attr("x", 40)
+      .attr("x", 35)
       .text("State Overlay Options");
 
 var explorationToolIcons = explorationTools
       .append('rect')
-      .attr("x", 45)
+      .attr("x", 25)
       .attr("y", 75)
       .attr("rx", 2)
       .attr("ry", 2)
@@ -308,9 +308,9 @@ var explorationToolText = explorationTools
         //.attr("class", "y label")
         //.attr("text-anchor", "end")
 
-        .attr("x", 40)
+        .attr("x", 20)
         .attr("y", function(d, i) {
-          return 38 + i * 22;
+          return 53 + i * 22;
         })
 
         .text("");
@@ -345,7 +345,11 @@ var arc = d3.svg.arc()
 
 d3.select("#explorationTools").insert("svg", "#explorationBackground")
       .classed("explorationSVG2", true)
-      .attr("id", "explorationSVG2")
+      .attr("id", "explorationSVG2");
+
+d3.select("#auxiliaryInfoTab").insert("svg", "#explorationBackground")
+      .classed("auxiliaryInfoSVG", true)
+      .attr("id", "auxiliaryInfoSVG1");
 
 function overlayButtonClick(d, i) {
 
@@ -397,32 +401,43 @@ function overlayButtonClick(d, i) {
           .attr("transform", "translate(0," +  5 + ")");
 
         brushColorOverlay(domain);
+        d3.select("#auxiliaryInfoTab").transition().duration(500).delay(100)
+            .style("opacity", 1)
+            .style("pointer-events", "all");
 
 
       } else {
           d3.select("#explorationSVG2").selectAll("*").remove();
+          d3.select("#auxiliaryInfoTab").transition().duration(500).delay(100)
+              .style("opacity", 0)
+              .style("pointer-events", "none");
       }
 }
 
-// function tmpstart() {
-//     console.log("start");
-// }
-//
-// function tmp() {
-//     console.log("brush");
-// }
-
 function brushColorOverlay(domain) {
+  // d3.select("#auxiliaryInfoTab").transition().duration(500).delay(500)
+  //     .style("opacity", 1)
+  //     .style("pointer-events", "all");
+
   d3.select("#colorOverlayG").remove();
-  // console.log(d3.selectAll("#colorOverlayG"));
+  d3.select("#auxiliaryInfoSVG1").selectAll("*").remove();
+
+  var auxSVG = d3.select("#auxiliaryInfoSVG1");
 
   var upper = d3.max(domain),
     lower = d3.min(domain),
     difference = x(upper)-x(lower),
-    step = difference/9;
+    step = difference/9,
+    keyStep = (upper - lower)/9;
+
     var scaleLocations = d3.range(x(lower), x(upper), step);
+    var keyLocations = d3.range(lower, upper, keyStep);
+
     if(scaleLocations.length > 9)
       scaleLocations = scaleLocations.slice(0, 9);
+    if(keyLocations.length > 9)
+      keyLocations = keyLocations.slice(0, 9);
+
     var myColor = d3.scale.quantize()
         .range(stateColor.range());
 
@@ -472,7 +487,45 @@ function brushColorOverlay(domain) {
       .attr("x", x(upper))
       .style("fill", myColor(9));
 
-    console.log(x(lower), x(upper));
+    //bind the scaled color range to auxiliary info tab
+    var keysG = auxSVG.selectAll(".brushColorKey")
+            .data(keyLocations)
+        .enter().append("g")
+            .attr("id", "brushColorKeyG");
+
+    keysG.append("rect")
+      .attr("opacity", 1)
+      .attr("stroke", "lightgrey")
+      .attr("height", 15)
+      .attr("width", 15)
+      .attr("x", 10)
+      .attr("y", function(d,i) {
+        return 10 + i * 18;
+      })
+      .attr("fill", function(d, i) {
+        return myColor(i);
+      });
+
+    var keyFormat = null;
+    if(upper <= 1 && lower >= 0)
+      keyFormat = d3.format(".3n");
+    else
+      keyFormat = d3.format(",.4r");
+
+    keysG.append("text")
+        .attr("x", 35)
+        .attr("y", function(d, i) {
+          return 22 + i * 18;
+        })
+        .text(function(d, i) {
+          if(i == 0)
+            return "<  " + keyFormat(d + keyStep);
+          if(i == 8)
+            return ">  " + keyFormat(d);
+          else {
+            return keyFormat(d) + " - " + keyFormat(d + keyStep);
+          }
+        });
 }
 
 function exploreBrush() {
@@ -490,7 +543,10 @@ function exploreBrushEnd() {
 // Toggles the exploration tab on the left-hand side
 function toggleExplorationTab() {
 
-  if(d3.select("#explorationTools").attr("showing") == "false") {   // Transition in
+  if(d3.select("#explorationTools").attr("showing") == "false") {  // Transition in
+    // d3.select("#auxiliaryInfoTab").transition().duration(500).delay(250)
+    //     .style("opacity", 1)
+    //     .style("pointer-events", "all");
     transitioning = true;
     // d3.select("#explorationToggle").style("pointer-events", "none");
 
@@ -512,12 +568,12 @@ function toggleExplorationTab() {
         .transition("fadeIn").duration(500).delay(500)
         .attr("width", 20)
         .attr("height", 20)
-        .attr("y", function(d,i) { return 25 + i * 22; });
+        .attr("y", function(d,i) { return 40 + i * 22; });
 
     explorationToolText
         .transition("fadeIn").duration(500).delay(500)
-        .attr("x", 70)
-        .attr("y", function(d,i) { return 38 + i * 22; })
+        .attr("x", 55)
+        .attr("y", function(d,i) { return 53 + i * 22; })
         .text(function(d, i) {
           return d.name;
         })
@@ -528,6 +584,9 @@ function toggleExplorationTab() {
         }, 500);
 
     } else {  // Transition out
+      d3.select("#auxiliaryInfoTab").transition().duration(500).delay(250)
+          .style("opacity", 0)
+          .style("pointer-events", "none");
       transitioning = true;
 
       // d3.select("#explorationToggle").style("pointer-events", "none");
@@ -548,11 +607,11 @@ function toggleExplorationTab() {
           .attr("width", 0)
           .attr("height", 0)
           .attr("y", 75)
-          .attr("x", 45);
+          .attr("x", 25);
 
       explorationToolText
           //.transition().duration(500)
-          .attr("x", 45)
+          .attr("x", 25)
           .attr("opacity", 0)
 
         setTimeout(function () {
