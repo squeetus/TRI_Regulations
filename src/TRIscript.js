@@ -717,6 +717,7 @@ function zoomstart() {
      currentComparison = null;
      fac.on("mouseover", null);
     // counties.attr("display", "none");
+    //  fac.attr("display", "none");
 }
 
 function zoomHandler() {
@@ -739,7 +740,7 @@ function zoomHandler() {
 function zoomend() {
     // Worth only updating facilityLayer for performance?
     //facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-
+    // fac.attr("display", "block");
     fac.on("mouseover", hover);
     //counties.attr("display", "inline");
     if(toolContext == ("brush") && (!event || !event.shiftKey)) {
