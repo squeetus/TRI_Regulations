@@ -1978,7 +1978,19 @@ keySelected = {
       "value": true},
     "4": {"name": "Recovery",
       "value": true},
-    "reset": resetKey
+    "reset": resetKey,
+    "numSelected": function() {
+      var num = 0;
+      if(this[1].value)
+        num++;
+      if(this[2].value)
+        num++;
+      if(this[3].value)
+        num++;
+      if(this[4].value)
+        num++;
+      return num;
+    }
 }
 
 d3.select("#keyReleases").on("click", function() { updateKey(1); });
@@ -2059,6 +2071,9 @@ function updateKey(id) {
           break;
       }
     }
+
+    if(currentComparison)
+      pieChart2();
 
 }
 
@@ -2941,7 +2956,7 @@ function pieChart(data) {
         .attr("transform", "translate(" + (25 + r) + "," + (40 + r) + ")")
 
   var arc = d3.svg.arc()
-    .innerRadius(35)
+    .innerRadius(40)
     .outerRadius(r);
 
   var pie = d3.layout.pie()
@@ -3016,24 +3031,24 @@ function pieChart2(data) {
       facilities = null;
   var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", "-1"];
   var dataTable = [
-    {"naics": "11", "releases": 0},
-    {"naics": "21", "releases": 0},
-    {"naics": "22", "releases": 0},
-    {"naics": "23", "releases": 0},
-    {"naics": "33", "releases": 0},
-    {"naics": "42", "releases": 0},
-    {"naics": "45", "releases": 0},
-    {"naics": "49", "releases": 0},
-    {"naics": "51", "releases": 0},
-    {"naics": "53", "releases": 0},
-    {"naics": "54", "releases": 0},
-    {"naics": "55", "releases": 0},
-    {"naics": "56", "releases": 0},
-    {"naics": "62", "releases": 0},
-    {"naics": "71", "releases": 0},
-    {"naics": "81", "releases": 0},
-    {"naics": "92", "releases": 0},
-    {"naics": "-1", "releases": 0},
+    {"naics": "11", "value": 0},
+    {"naics": "21", "value": 0},
+    {"naics": "22", "value": 0},
+    {"naics": "23", "value": 0},
+    {"naics": "33", "value": 0},
+    {"naics": "42", "value": 0},
+    {"naics": "45", "value": 0},
+    {"naics": "49", "value": 0},
+    {"naics": "51", "value": 0},
+    {"naics": "53", "value": 0},
+    {"naics": "54", "value": 0},
+    {"naics": "55", "value": 0},
+    {"naics": "56", "value": 0},
+    {"naics": "62", "value": 0},
+    {"naics": "71", "value": 0},
+    {"naics": "81", "value": 0},
+    {"naics": "92", "value": 0},
+    {"naics": "-1", "value": 0},
   ]
 
   switch(currentComparison.type) {
@@ -3054,8 +3069,22 @@ function pieChart2(data) {
     for (var i=0; i < dataTable.length; i++) {
         if (dataTable[i].naics === d.NAICS) {
             for(var j=0; j < d.releases.length; j++) {
-              dataTable[i].releases += d.releases[j];
-              updateCount += d.releases[j];
+                if(keySelected[1].value) {
+                  dataTable[i].value += d.releases[j];
+                  updateCount += d.releases[j];
+                }
+                if(keySelected[2].value) {
+                  dataTable[i].value += d.recycling[j];
+                  updateCount += d.recycling[j];
+                }
+                if(keySelected[3].value) {
+                  dataTable[i].value += d.treatment[j];
+                  updateCount += d.treatment[j];
+                }
+                if(keySelected[4].value) {
+                  dataTable[i].value += d.recovery[j];
+                  updateCount += d.recovery[j];
+                }
             }
             break;
         }
@@ -3081,7 +3110,40 @@ function pieChart2(data) {
       .attr("transform", "translate(10, 15)")
       .attr("id", "infoTable1_Graph1")
       .classed("graphChartTable", true)
-      .text("Releases:");
+      .text(function() {
+        var title = "";
+        if(keySelected.numSelected() == 4)
+          return "Total Usage";
+        else {
+          if(keySelected[1].value) {
+            title += "Releases "
+          }
+          if(keySelected[2].value) {
+            if(title.length > 0)
+              title += "+ Recycling "
+            else {
+              title += "Recycling "
+            }
+          }
+          if(keySelected[3].value) {
+            if(title.length > 0)
+              title += "+ Treatment "
+            else {
+              title += "Treatment "
+            }
+          }
+          if(keySelected[4].value) {
+            if(title.length > 0)
+              title += "+ Recovery "
+            else {
+              title += "Recovery "
+            }
+          }
+
+          return title;
+        }
+
+      });
 
   var pieChartArea = auxSVG
     .data([data])
@@ -3093,7 +3155,7 @@ function pieChart2(data) {
     .outerRadius(r);
 
   var pie = d3.layout.pie()
-    .value(function(d) { return d.releases; });
+    .value(function(d) { return d.value; });
 
   var arcs = pieChartArea.selectAll(".graph1Slice")
     .data(pie)
