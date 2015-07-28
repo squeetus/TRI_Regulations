@@ -1654,7 +1654,7 @@ function hover(d) {
 
     // compareList.add(new comparison(d.facilityName, "facility", copyTotal(), d.id));
     // updateList();
-    console.log(d);
+
     currentComparison = new comparison( d.facilityName, "facility", copyTotal(), d.id);
     lineGraph(total);
     //Show data div
@@ -1743,7 +1743,8 @@ function colorFacilities(arg) {
           d3.select("#auxiliaryInfoTab")
             .style("height", "180px")
             .style("width", "80px")
-            .style("left", "90%");
+            .style("left", "90%")
+            .style("top", "10%");
 
           facilityColor = d3.scale.quantize().range(colorbrewer.RdYlGn[9]).domain([1,0]);
           tmpData = facilityColor.range();
@@ -1755,7 +1756,8 @@ function colorFacilities(arg) {
           d3.select("#auxiliaryInfoTab")
             .style("height", "340px")
             .style("width", "285px")
-            .style("left", "70%");
+            .style("left", "70%")
+            .style("top", "5%");
 
           //facilityColor = d3.scale.category20();
           tmpData = industryColor.range().slice(0, industryLookup.length);
@@ -2939,7 +2941,7 @@ function pieChart(data) {
         .attr("transform", "translate(" + (25 + r) + "," + (40 + r) + ")")
 
   var arc = d3.svg.arc()
-    // .innerRadius(25)
+    .innerRadius(35)
     .outerRadius(r);
 
   var pie = d3.layout.pie()
