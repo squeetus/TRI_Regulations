@@ -32,6 +32,17 @@ rect.area.hidden {
     border-radius: 5px;
 }
 
+#applicationInfo {
+    position: absolute;
+    top: 55%;
+    left: 85%;
+    width: 230px;
+    height: 20px;
+    font-family: "Helvetica Neue", Helvetica;
+    font-size: 70%;
+    padding: 5px;
+}
+
 #auxiliaryInfoTab {
     position: absolute;
     left: 80%;
@@ -138,6 +149,18 @@ rect.area.hidden {
 
 .graph {
     /*background-color: white;*/
+    font-family: "Helvetica Neue", Helvetica;
+    font-size: 70%;
+}
+
+.graph1Slice {
+  font-family: "Helvetica Neue", Helvetica;
+  font-size: 70%;
+}
+
+.graph2Slice {
+  font-family: "Helvetica Neue", Helvetica;
+  font-size: 70%;
 }
 
 .graphLine {
@@ -146,6 +169,17 @@ rect.area.hidden {
     height: 280px;
     pointer-events: none;
 
+}
+
+.graph_pieChart {
+    position: absolute;
+    border: solid 5px black;
+    /*font-family: "Helvetica Neue", Helvetica;*/
+}
+
+.graphChartTable {
+    /*font-family: "Helvetica Neue", Helvetica;*/
+    font-size: 70%;
 }
 
 .area {
