@@ -356,6 +356,12 @@ div.no_selection {
   shape-rendering: crispEdges;
 }
 
+.graphBrush {
+  fill-opacity: .1;
+  stroke: #fff;
+  shape-rendering: crispEdges;
+}
+
 .brushColorOverlay {
   opacity: 0.1;
 }
@@ -396,6 +402,10 @@ div.no_selection {
   display: none;
 }
 
+.grid {
+    pointer-events: none;
+}
+
 .grid .tick {
     stroke: lightgrey;
     opacity: 0.7;
@@ -404,6 +414,7 @@ div.no_selection {
 .lineChart {
   fill:none;
   stroke-width: 2;
+  pointer-events: none;
 }
 
 .axis path,

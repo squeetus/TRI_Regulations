@@ -710,7 +710,7 @@ var backgroundRect = quadTreeLayer.append("rect")
 
 
 function clickedBackground() {
-//    console.log("clickedBackground");
+  //  console.log("clickedBackground");
     resetTotal();
     lineGraph(total);
     clearFacilities();
@@ -725,6 +725,11 @@ function clickedBackground() {
     d3.select("#auxiliaryInfoTab").style("opacity", 0);
     d3.select("#pieChart_Graph1").selectAll("*").remove();
     d3.select("#pieChart_Graph2").selectAll("*").remove();
+
+    if(graphs) {
+      graphs.graphBrush.clear();
+      d3.selectAll("#graphBrush1").call(graphs.graphBrush);
+    }
 
     if(showingGraphTwo) {
       hideGraph();
@@ -787,28 +792,45 @@ function zoomHandler() {
       translate = d3.event.translate;
       scaleFactor = d3.event.scale;
     }
-    // usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-    usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-}
 
-function zoomend() {
-  console.log("zoomend");
-    clearBrush();
-    quadTreeLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-    facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-    fac.attr("r", nodeSize/scaleFactor );
-    fac.attr("stroke-width", strokeWidth/scaleFactor);
     stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
     states.attr("stroke-width", function(d) {
       return (strokeWidth*2)/scaleFactor;
       //TODO: scale this depending on whether a state is highlighted
     });
 
-    // Worth only updating facilityLayer for performance?
-    //facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
-    fac.attr("display", "block");
-    fac.on("mouseover", hover);
+    // usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+    usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+}
+
+function zoomend() {
+  console.log("zoomend");
+  //   clearBrush();
+  // //  quadTreeLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+  //   facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+  //   fac.attr("r", nodeSize/scaleFactor );
+  //   fac.attr("stroke-width", strokeWidth/scaleFactor);
+  //   stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
+  //   states.attr("stroke-width", function(d) {
+  //     return (strokeWidth*2)/scaleFactor;
+  //     //TODO: scale this depending on whether a state is highlighted
+  //   });
+  //
+  //   // Worth only updating facilityLayer for performance?
+  //   //facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+  //   fac.attr("display", "block");
+  //   fac.on("mouseover", hover);
     //counties.attr("display", "inline");
+
+    clearBrush();
+    // stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
+    // states.attr("stroke-width", function(d) {
+    //   return (strokeWidth*2)/scaleFactor;
+    //   //TODO: scale this depending on whether a state is highlighted
+    // });
+
+    displayFacilities();
+
     if(toolContext == ("brush") && (!event || !event.shiftKey)) {
         clearEffects();
         currentComparison = null;
@@ -1598,6 +1620,9 @@ d3.json("data/facilities.json", function(error, f) {
         .on("mouseover", hover)
         .on("mouseout", out)
         .on("click", facilityClick)
+        /// not visible at first
+        .attr("display", "none")
+        ///
         .call(zoom);
 
 });
@@ -1804,6 +1829,15 @@ function colorFacilities(arg) {
             }
         });
 
+}
+
+function displayFacilities() {
+  facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
+  fac.attr("r", nodeSize/scaleFactor );
+  fac.attr("stroke-width", strokeWidth/scaleFactor);
+
+  fac.attr("display", "block");
+  fac.on("mouseover", hover);
 }
 
 
@@ -2083,28 +2117,47 @@ function updateKey(id) {
 //
 /////////////////////////////////////////////////////////////////////////////
 
+
 function initializeLineGraphs() {
 
   graph1 = d3.select("#graph1")
     .attr("width", width-250)
     .attr("height", 150)
-    .attr("opacity", 0)
-    .on("mouseover", graphHover)
-    .on("mousemove", graphMove)
-    .on("mouseout", graphOut);
+    .attr("opacity", 0);
+    // .on("mouseover", graphHover)
+    // .on("mousemove", graphMove)
+    // .on("mouseout", graphOut);
 
   graph2 = d3.select("#graph2")
       .attr("x", 150)
       .attr("width", width-250)
       .attr("height", 150)
-      .attr("opacity", 1)
-      .on("mouseover", graphHover)
-      .on("mousemove", graphMove)
-      .on("mouseout", graphOut);
+      .attr("opacity", 1);
+      // .on("mouseover", graphHover)
+      // .on("mousemove", graphMove)
+      // .on("mouseout", graphOut);
 
   var xScale = d3.scale.linear().range([144, width-300]).domain([1987, 2013]).clamp(true);
   var yScale = d3.scale.linear().range([150-25, 25]).domain([0,0]);
   var legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true);
+
+  var graphBrush = d3.svg.brush()
+          .x(xScale)
+          // .classed(".graphBrush")
+          // .on("brush", graphBrushed);
+          .on("brushend", graphBrushEnded);
+
+  d3.select("#graph1").append("g")
+            .attr("id", "graphBrush1")
+            .classed(".graphBrush", true)
+            .call(graphBrush)
+            .selectAll("rect")
+            .attr("y", 25)
+            .attr("height", 100)
+            .style({
+               "fill": "grey",
+               "fill-opacity": "0.2"
+            });
 
   var xAxis = d3.svg.axis()
       .scale(xScale)
@@ -2129,7 +2182,7 @@ function initializeLineGraphs() {
       .call(yAxis);
 
   var yGrid = yAxis.ticks(5)
-        .tickSize(width-250, 0)
+        .tickSize(width-150-300, 0)
         .tickFormat("")
         .orient("right");
 
@@ -2246,79 +2299,130 @@ function initializeLineGraphs() {
       yAxis: yAxis,
       lineGen: lineGen,
       legendScale: legendScale,
-      yGrid: yGrid
+      yGrid: yGrid,
+      graphBrush: graphBrush
     }
 }
 
-function graphHover() {
-  if(d3.select("#graph1").style("opacity") > 0)
-    d3.select("#graphLine")
-      .classed("hidden", false);
-}
+function graphBrushed() {
+  var extent0 = graphs.graphBrush.extent(),
+      extent1;
 
-function graphOut() {
-  d3.select("#graphLine")
-      .classed("hidden", true);
-}
-
-// var graphHoverRectangle = d3.select("#graphs").append("path").attr("class", "area");
-var graphHoverRectangle = d3.select("#graphLine").append("svg:rect").attr("class", "area");
-var graphHoverRectangle2 = d3.select("#graphLine").append("svg:rect").attr("class", "area");
-
-
-function graphMove() {
-  if(d3.select("#graph1").style("opacity") == 0)
-    return;
-
-  var m = d3.mouse(this),
-   thisYear = Math.floor(graphs.xScale.invert(m[0]));
-  var bounds = [
-    Math.floor(graphs.xScale(thisYear)),
-    Math.floor(graphs.xScale(thisYear+1))
-  ]
-
-
-  if(bounds[0] != graphHoverRectangle.attr("x")) {
-
-    graphHoverRectangle
-        .attr("x", function() { return bounds[0]; })
-        .attr("y", 25)
-        .attr("width", bounds[1]-bounds[0])
-        .attr("height", 150)
-
-    //INFORMATION FROM LINEGRAPH hover
-    if(currentComparison)
-      console.log({
-          "year": thisYear,
-          "releases": currentComparison.data.releases[thisYear-1987],
-          "recycling": currentComparison.data.recycling[thisYear-1987],
-          "treatment": currentComparison.data.treatment[thisYear-1987],
-          "recovery": currentComparison.data.recovery[thisYear-1987]
-      });
-
-
-    if(showingGraphTwo) {
-        console.log({
-            "year": thisYear,
-            "releases": compareList.data[compareList.pos].data.releases[thisYear-1987],
-            "recycling": compareList.data[compareList.pos].data.recycling[thisYear-1987],
-            "treatment": compareList.data[compareList.pos].data.treatment[thisYear-1987],
-            "recovery": compareList.data[compareList.pos].data.recovery[thisYear-1987]
-        });
-        graphHoverRectangle2
-          .classed("hidden", false);
-
-        graphHoverRectangle2
-            .attr("x", function() { return bounds[0]; })
-            .attr("y", 175)
-            .attr("width", 32)
-            .attr("height", 150)
-    } else {
-        graphHoverRectangle2
-          .classed("hidden", true);
-    }
+  // if dragging, preserve the width of the extent
+  if (d3.event.mode === "move") {
+    var d0 = Math.round(extent0[0]),
+        d1 = Math.floor(extent0[1]);
+    extent1 = [d0, d1];
   }
+
+  // otherwise, if resizing, round both dates
+  else {
+    extent1 = extent0.map(Math.round);
+
+    // if empty when rounded, use floor & ceil instead
+    if (extent1[0] >= extent1[1]) {
+      extent1[0] = Math.floor(extent0[0]);
+      extent1[1] = Math.ceil(extent0[1]);
+    }
+
+    pieChart2(extent1);
+  }
+
+  d3.select(this).call(graphs.graphBrush.extent(extent1));
+
+
 }
+
+
+function graphBrushEnded() {
+  if (!d3.event.sourceEvent) return; // only transition after input
+
+  var extent0 = graphs.graphBrush.extent(),
+      extent1 = extent0.map(Math.round);
+
+
+  // if empty when rounded, use floor & ceil instead
+  if (extent1[0] >= extent1[1]) {
+    extent1[0] = Math.floor(extent0[0]);
+    extent1[1] = Math.ceil(extent0[1]);
+  }
+
+  d3.select(this).transition("brushResize").duration(250)
+      .call(graphs.graphBrush.extent(extent1))
+      .call(graphs.graphBrush.event);
+
+  pieChart2(extent1);
+}
+
+// function graphHover() {
+//   if(d3.select("#graph1").style("opacity") > 0)
+//     d3.select("#graphLine")
+//       .classed("hidden", false);
+// }
+//
+// function graphOut() {
+//   d3.select("#graphLine")
+//       .classed("hidden", true);
+// }
+//
+// // var graphHoverRectangle = d3.select("#graphs").append("path").attr("class", "area");
+// var graphHoverRectangle = d3.select("#graphLine").append("svg:rect").attr("class", "area");
+// var graphHoverRectangle2 = d3.select("#graphLine").append("svg:rect").attr("class", "area");
+//
+//
+// function graphMove() {
+//   if(d3.select("#graph1").style("opacity") == 0)
+//     return;
+//
+//   var m = d3.mouse(this),
+//    thisYear = Math.floor(graphs.xScale.invert(m[0]));
+//   var bounds = [
+//     Math.floor(graphs.xScale(thisYear)),
+//     Math.floor(graphs.xScale(thisYear+1))
+//   ]
+//
+//
+//   if(bounds[0] != graphHoverRectangle.attr("x")) {
+//
+//     graphHoverRectangle
+//         .attr("x", function() { return bounds[0]; })
+//         .attr("y", 25)
+//         .attr("width", bounds[1]-bounds[0])
+//         .attr("height", 150)
+//
+//     //INFORMATION FROM LINEGRAPH hover
+//     if(currentComparison)
+//       console.log({
+//           "year": thisYear,
+//           "releases": currentComparison.data.releases[thisYear-1987],
+//           "recycling": currentComparison.data.recycling[thisYear-1987],
+//           "treatment": currentComparison.data.treatment[thisYear-1987],
+//           "recovery": currentComparison.data.recovery[thisYear-1987]
+//       });
+//
+//
+//     if(showingGraphTwo) {
+//         console.log({
+//             "year": thisYear,
+//             "releases": compareList.data[compareList.pos].data.releases[thisYear-1987],
+//             "recycling": compareList.data[compareList.pos].data.recycling[thisYear-1987],
+//             "treatment": compareList.data[compareList.pos].data.treatment[thisYear-1987],
+//             "recovery": compareList.data[compareList.pos].data.recovery[thisYear-1987]
+//         });
+//         graphHoverRectangle2
+//           .classed("hidden", false);
+//
+//         graphHoverRectangle2
+//             .attr("x", function() { return bounds[0]; })
+//             .attr("y", 175)
+//             .attr("width", 32)
+//             .attr("height", 150)
+//     } else {
+//         graphHoverRectangle2
+//           .classed("hidden", true);
+//     }
+//   }
+// }
 
 function lineGraph(d, id) {
     pieChart2();
@@ -2857,6 +2961,7 @@ function bindKeys() {
             //console.log(currentComparison, compareList.data);
             //toggleExplorationTab();
             colorFacilities(1);
+            fac.attr("display", "default")
         }
 
         // SIX
@@ -2864,7 +2969,39 @@ function bindKeys() {
             //console.log(currentComparison, compareList.data);
             //toggleExplorationTab();
             colorFacilities(2);
+            fac.attr("display", "default")
             //toggleAuxilliaryTab();
+        }
+
+        // SEVEN
+        if( d3.event.keyCode === 55) {
+            displayFacilities();
+
+        }
+
+        // <
+        if( d3.event.keyCode === 37) {
+          var bounds = graphs.graphBrush.extent();
+          if((bounds[0] == bounds[1]) || (bounds[0] <= 1987)) {
+            return;
+          } else {
+              graphs.graphBrush.extent([bounds[0]-1, bounds[1]-1]);
+              d3.select("#graphBrush1").call(graphs.graphBrush);
+              pieChart2(graphs.graphBrush.extent());
+          }
+
+        }
+
+        // >
+        if( d3.event.keyCode === 39) {
+            var bounds = graphs.graphBrush.extent();
+            if((bounds[0] == bounds[1]) || (bounds[1] >= 2013)) {
+              return;
+            } else {
+                graphs.graphBrush.extent([bounds[0]+1, bounds[1]+1]);
+                d3.select("#graphBrush1").call(graphs.graphBrush);
+                pieChart2(graphs.graphBrush.extent());
+            }
         }
     });
 }
@@ -3017,15 +3154,19 @@ function pieChart(data) {
         .text("");
 }
 
-
 d3.select("#graphs").insert("svg:svg", "#graph2")
     .attr("id", "pieChart_Graph1")
     .classed("graph_pieChart");
 
 
 // Pie chart for line graphs; total releases (or 4 vars) by industry sector
-function pieChart2(data) {
+function pieChart2(bounds) {
   if(!currentComparison) return;
+  if(!bounds || bounds[0] < 1986 || bounds[1] > 2013) {
+    bounds = [1986, 2013];
+    graphs.graphBrush.clear();
+    // d3.select(".graphBrush").call(graphs.graphBrush);
+  }
 
   var r = 50,
       facilities = null;
@@ -3068,7 +3209,7 @@ function pieChart2(data) {
   facilities.each(function(d) {
     for (var i=0; i < dataTable.length; i++) {
         if (dataTable[i].naics === d.NAICS) {
-            for(var j=0; j < d.releases.length; j++) {
+            for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
                 if(keySelected[1].value) {
                   dataTable[i].value += d.releases[j];
                   updateCount += d.releases[j];
@@ -3096,8 +3237,6 @@ function pieChart2(data) {
     return;
   }
 
-  data = dataTable;
-
   //toggleAuxilliaryTab(1);
   d3.select("#pieChart_Graph1").selectAll("*").remove();
   var auxSVG = d3.select("#pieChart_Graph1")
@@ -3107,7 +3246,7 @@ function pieChart2(data) {
                 .attr("height", "150px");
 
   auxSVG.append("text")
-      .attr("transform", "translate(10, 15)")
+      .attr("transform", "translate(10, 10)")
       .attr("id", "infoTable1_Graph1")
       .classed("graphChartTable", true)
       .text(function() {
@@ -3139,14 +3278,21 @@ function pieChart2(data) {
               title += "Recovery "
             }
           }
-
           return title;
         }
 
       });
 
+  auxSVG.append("text")
+      .attr("transform", "translate(10, 22)")
+      .attr("id", "infoTable2_Graph1")
+      .classed("graphChartTable", true)
+      .text(function() {
+        return (bounds[0]) + " - " + (bounds[1]);
+      });
+
   var pieChartArea = auxSVG
-    .data([data])
+    .data([dataTable])
     .append("svg:g")
         .attr("transform", "translate(" + (40 + r) + "," + (25 + r) + ")")
 
@@ -3165,12 +3311,12 @@ function pieChart2(data) {
             .on("mouseover", function(d, i){
               //update text area to display the industry sector
               var industry = "";
-              if(naicsTable[data[i].naics].length > 25)
-                industry = naicsTable[data[i].naics].substring(0, 25) + "... "
+              if(naicsTable[dataTable[i].naics].length > 25)
+                industry = naicsTable[dataTable[i].naics].substring(0, 25) + "... "
               else {
-                industry = naicsTable[data[i].naics] + ": "
+                industry = naicsTable[dataTable[i].naics] + ": "
               }
-              d3.select("#infoTable1_Graph1").text("Releases:");
+              //d3.select("#infoTable1_Graph1").text("Releases:");
               d3.select("#infoTable_Graph1").text(industry + d3.format(",.8r")(d.value) + " lbs");
               //console.log(naicsTable[data[i].naics]);
 
@@ -3210,7 +3356,7 @@ function pieChart2(data) {
           .attr("text-anchor", "middle")
           .attr("pointer-events", "none")
           .text(function(d, i) {
-              return (d.endAngle - d.startAngle > 1) ? naicsTable[data[i].naics] : "";
+              return (d.endAngle - d.startAngle > 1) ? naicsTable[dataTable[i].naics] : "";
           });
 
     auxSVG.append("text")
