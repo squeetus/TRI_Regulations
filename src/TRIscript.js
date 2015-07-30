@@ -2108,6 +2108,10 @@ function updateKey(id) {
 
     if(currentComparison)
       pieChart2();
+    if(compareList)
+      pieChart2(null, null, 2);
+
+
 
 }
 
@@ -2149,6 +2153,18 @@ function initializeLineGraphs() {
 
   d3.select("#graph1").append("g")
             .attr("id", "graphBrush1")
+            .classed(".graphBrush", true)
+            .call(graphBrush)
+            .selectAll("rect")
+            .attr("y", 25)
+            .attr("height", 100)
+            .style({
+               "fill": "grey",
+               "fill-opacity": "0.2"
+            });
+
+  d3.select("#graph2").append("g")
+            .attr("id", "graphBrush2")
             .classed(".graphBrush", true)
             .call(graphBrush)
             .selectAll("rect")
@@ -2340,18 +2356,22 @@ function graphBrushEnded() {
   var extent0 = graphs.graphBrush.extent(),
       extent1 = extent0.map(Math.round);
 
-
   // if empty when rounded, use floor & ceil instead
   if (extent1[0] >= extent1[1]) {
     extent1[0] = Math.floor(extent0[0]);
     extent1[1] = Math.ceil(extent0[1]);
   }
+  console.log(d3.select(this));
+  d3.select("#graphBrush1").transition("brushResize").duration(250)
+      .call(graphs.graphBrush.extent(extent1))
+      .call(graphs.graphBrush.event);
 
-  d3.select(this).transition("brushResize").duration(250)
+  d3.select("#graphBrush2").transition("brushResize").duration(250)
       .call(graphs.graphBrush.extent(extent1))
       .call(graphs.graphBrush.event);
 
   pieChart2(extent1);
+  pieChart2(extent1, null, 2);
 }
 
 // function graphHover() {
@@ -2425,7 +2445,10 @@ function graphBrushEnded() {
 // }
 
 function lineGraph(d, id) {
-    pieChart2();
+    if(!id)
+      pieChart2();
+    else if(id == 2)
+      pieChart2(null, null, 2);
 
     if(!d || !d.releases) return;
   // console.log(largerYScale.domain(), graphs.yScale.domain());
@@ -2729,11 +2752,16 @@ function updateList() {
             if(event.shiftKey) {
               showGraph(2);
               lineGraph(d.data, 1);
+              compareList.pos = i;
+              listContents.classed("listEleCurr", function(d, i) { return i == compareList.pos; })
               reSelect(d);
             } else {
               showingGraphTwo = true;
               showGraph(2);
               lineGraph(d.data, 2);
+              console.log(listContents)
+              compareList.pos = i;
+              listContents.classed("listEleCurr", function(d, i) { return i == compareList.pos; })
               reSelect(d);
 
             }
@@ -2987,7 +3015,9 @@ function bindKeys() {
           } else {
               graphs.graphBrush.extent([bounds[0]-1, bounds[1]-1]);
               d3.select("#graphBrush1").call(graphs.graphBrush);
+              d3.select("#graphBrush2").call(graphs.graphBrush);
               pieChart2(graphs.graphBrush.extent());
+              pieChart2(graphs.graphBrush.extent(), null, 2);
           }
 
         }
@@ -3000,7 +3030,9 @@ function bindKeys() {
             } else {
                 graphs.graphBrush.extent([bounds[0]+1, bounds[1]+1]);
                 d3.select("#graphBrush1").call(graphs.graphBrush);
+                d3.select("#graphBrush2").call(graphs.graphBrush);
                 pieChart2(graphs.graphBrush.extent());
+                pieChart2(graphs.graphBrush.extent(), null, 2);
             }
         }
     });
@@ -3081,7 +3113,8 @@ function pieChart(data) {
     }
   });
 
-  data = naicsCountTable;
+
+    data = naicsCountTable;
 
   toggleAuxilliaryTab(1);
   // d3.select("#auxiliaryInfoSVG1").selectAll("*").remove();
@@ -3158,14 +3191,24 @@ d3.select("#graphs").insert("svg:svg", "#graph2")
     .attr("id", "pieChart_Graph1")
     .classed("graph_pieChart");
 
+d3.select("#graphs").append("svg:svg")
+    .attr("id", "pieChart_Graph2")
+    .classed("graph_pieChart");
 
 // Pie chart for line graphs; total releases (or 4 vars) by industry sector
-function pieChart2(bounds) {
+// bounds are the year restrictions from brushing
+// mode is state or facility
+//
+function pieChart2(bounds, mode, loc) {
   if(!currentComparison) return;
   if(!bounds || bounds[0] < 1986 || bounds[1] > 2013) {
     bounds = [1986, 2013];
     graphs.graphBrush.clear();
     // d3.select(".graphBrush").call(graphs.graphBrush);
+  }
+
+  if(!loc) {
+    loc = 1;
   }
 
   var r = 50,
@@ -3192,100 +3235,211 @@ function pieChart2(bounds) {
     {"naics": "-1", "value": 0},
   ]
 
-  switch(currentComparison.type) {
-    case "states":
-      facilities = fac.filter(function(d) { return selectedStates.array.indexOf(d.state) >= 0; })
-      break;
-    case "facility":
-      facilities = fac.filter(function(d) {
-          return currentComparison.collection == d.id; });
-      break;
-    case "brush":
-      //TODO
-      break;
-  }
+  mode = 2; //states
+  if(loc == 1) {
+    switch(currentComparison.type) {
+      case "states":
+        facilities = fac.filter(function(d) { return selectedStates.array.indexOf(d.state) >= 0; })
+        var updateCount = 0;
+        facilities.each(function(d) {
+          for (var i=0; i < dataTable.length; i++) {
+              if (dataTable[i].naics === d.NAICS) {
+                  for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
+                      if(keySelected[1].value) {
+                        dataTable[i].value += d.releases[j];
+                        updateCount += d.releases[j];
+                      }
+                      if(keySelected[2].value) {
+                        dataTable[i].value += d.recycling[j];
+                        updateCount += d.recycling[j];
+                      }
+                      if(keySelected[3].value) {
+                        dataTable[i].value += d.treatment[j];
+                        updateCount += d.treatment[j];
+                      }
+                      if(keySelected[4].value) {
+                        dataTable[i].value += d.recovery[j];
+                        updateCount += d.recovery[j];
+                      }
+                  }
+                  break;
+              }
+          }
+        });
 
-  var updateCount = 0;
-  facilities.each(function(d) {
-    for (var i=0; i < dataTable.length; i++) {
-        if (dataTable[i].naics === d.NAICS) {
-            for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
-                if(keySelected[1].value) {
-                  dataTable[i].value += d.releases[j];
-                  updateCount += d.releases[j];
-                }
-                if(keySelected[2].value) {
-                  dataTable[i].value += d.recycling[j];
-                  updateCount += d.recycling[j];
-                }
-                if(keySelected[3].value) {
-                  dataTable[i].value += d.treatment[j];
-                  updateCount += d.treatment[j];
-                }
-                if(keySelected[4].value) {
-                  dataTable[i].value += d.recovery[j];
-                  updateCount += d.recovery[j];
-                }
-            }
-            break;
+        if(updateCount == 0) {
+          d3.select("#pieChart_Graph1").selectAll("*").remove();
+          return;
         }
-    }
-  });
+        break;
+      case "facility":
+        mode = 1; // facilities
+        dataTable = [
+          {"name": "releases", "value": 0},
+          {"name": "recycling", "value": 0},
+          {"name": "treatment", "value": 0},
+          {"name": "recovery", "value": 0}
+        ]
+        var updateCount = 0;
+        facility = fac.filter(function(d) {
+            return currentComparison.collection == d.id;
+        });
 
-  if(updateCount == 0) {
-    d3.select("#pieChart_Graph1").selectAll("*").remove();
-    return;
-  }
+        for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
+          dataTable[0].value += currentComparison.data.releases[j];
+          updateCount += currentComparison.data.releases[j];
+
+          dataTable[1].value += currentComparison.data.recycling[j];
+          updateCount += currentComparison.data.recycling[j];
+
+          dataTable[2].value += currentComparison.data.treatment[j];
+          updateCount += currentComparison.data.treatment[j];
+
+          dataTable[3].value += currentComparison.data.recovery[j];
+          updateCount += currentComparison.data.recovery[j];
+        }
+
+        if(updateCount == 0) {
+          d3.select("#pieChart_Graph1").selectAll("*").remove();
+          return;
+        }
+
+        break;
+      case "brush":
+        //TODO
+        break;
+    }
+  } else if(loc == 2) {
+    console.log(compareList.data[compareList.pos].collection);
+    switch(compareList.data[compareList.pos].type) {
+      case "states":
+        facilities = fac.filter(function(d) { return compareList.data[compareList.pos].collection.indexOf(d.state) >= 0; })
+        var updateCount = 0;
+        facilities.each(function(d) {
+          for (var i=0; i < dataTable.length; i++) {
+              if (dataTable[i].naics === d.NAICS) {
+                  for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
+                      if(keySelected[1].value) {
+                        dataTable[i].value += d.releases[j];
+                        updateCount += d.releases[j];
+                      }
+                      if(keySelected[2].value) {
+                        dataTable[i].value += d.recycling[j];
+                        updateCount += d.recycling[j];
+                      }
+                      if(keySelected[3].value) {
+                        dataTable[i].value += d.treatment[j];
+                        updateCount += d.treatment[j];
+                      }
+                      if(keySelected[4].value) {
+                        dataTable[i].value += d.recovery[j];
+                        updateCount += d.recovery[j];
+                      }
+                  }
+                  break;
+              }
+          }
+        });
+
+        if(updateCount == 0) {
+          d3.select("#pieChart_Graph2").selectAll("*").remove();
+          return;
+        }
+        break;
+      case "facility":
+        mode = 1; // facilities
+        dataTable = [
+          {"name": "releases", "value": 0},
+          {"name": "recycling", "value": 0},
+          {"name": "treatment", "value": 0},
+          {"name": "recovery", "value": 0}
+        ]
+        var updateCount = 0;
+        facility = fac.filter(function(d) {
+            return compareList.data[compareList.pos].collection == d.id;
+        });
+
+        for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
+          dataTable[0].value += compareList.data[compareList.pos].data.releases[j];
+          updateCount += compareList.data[compareList.pos].data.releases[j];
+
+          dataTable[1].value += compareList.data[compareList.pos].data.recycling[j];
+          updateCount += compareList.data[compareList.pos].data.recycling[j];
+
+          dataTable[2].value += compareList.data[compareList.pos].data.treatment[j];
+          updateCount += compareList.data[compareList.pos].data.treatment[j];
+
+          dataTable[3].value += compareList.data[compareList.pos].data.recovery[j];
+          updateCount += compareList.data[compareList.pos].data.recovery[j];
+        }
+
+        if(updateCount == 0) {
+          d3.select("#pieChart_Graph2").selectAll("*").remove();
+          return;
+        }
+
+        break;
+      case "brush":
+        //TODO
+        break;
+    }
+}
 
   //toggleAuxilliaryTab(1);
-  d3.select("#pieChart_Graph1").selectAll("*").remove();
-  var auxSVG = d3.select("#pieChart_Graph1")
+  d3.select("#pieChart_Graph" + loc).selectAll("*").remove();
+  var auxSVG = d3.select("#pieChart_Graph" +loc)
                 .attr("x", width-230)
-                .attr("y", 20)
+                .attr("y", 20 + ((loc-1) * 150))
                 .attr("width", "200px")
                 .attr("height", "150px");
 
   auxSVG.append("text")
       .attr("transform", "translate(10, 10)")
-      .attr("id", "infoTable1_Graph1")
+      .attr("id", "infoTable1_Graph" + loc)
       .classed("graphChartTable", true)
       .text(function() {
-        var title = "";
-        if(keySelected.numSelected() == 4)
-          return "Total Usage";
-        else {
-          if(keySelected[1].value) {
-            title += "Releases "
-          }
-          if(keySelected[2].value) {
-            if(title.length > 0)
-              title += "+ Recycling "
-            else {
-              title += "Recycling "
+        if(mode == 2) {
+          var title = "";
+          if(keySelected.numSelected() == 4)
+            return "Total Usage";
+          else {
+            if(keySelected[1].value) {
+              title += "Releases "
             }
-          }
-          if(keySelected[3].value) {
-            if(title.length > 0)
-              title += "+ Treatment "
-            else {
-              title += "Treatment "
+            if(keySelected[2].value) {
+              if(title.length > 0)
+                title += "+ Recycling "
+              else {
+                title += "Recycling "
+              }
             }
-          }
-          if(keySelected[4].value) {
-            if(title.length > 0)
-              title += "+ Recovery "
-            else {
-              title += "Recovery "
+            if(keySelected[3].value) {
+              if(title.length > 0)
+                title += "+ Treatment "
+              else {
+                title += "Treatment "
+              }
             }
+            if(keySelected[4].value) {
+              if(title.length > 0)
+                title += "+ Recovery "
+              else {
+                title += "Recovery "
+              }
+            }
+            return title;
           }
-          return title;
+        } else if(mode == 1) {
+          return "Usage"
         }
+
+
 
       });
 
   auxSVG.append("text")
       .attr("transform", "translate(10, 22)")
-      .attr("id", "infoTable2_Graph1")
+      .attr("id", "infoTable2_Graph" + loc)
       .classed("graphChartTable", true)
       .text(function() {
         return (bounds[0]) + " - " + (bounds[1]);
@@ -3303,25 +3457,29 @@ function pieChart2(bounds) {
   var pie = d3.layout.pie()
     .value(function(d) { return d.value; });
 
-  var arcs = pieChartArea.selectAll(".graph1Slice")
+  var arcs = pieChartArea.selectAll(".graph" + loc + "Slice")
     .data(pie)
     .enter()
         .append("svg:g")
-            .attr("class", "graph1Slice")
+            .attr("class", "graph" + loc + "Slice")
             .on("mouseover", function(d, i){
               //update text area to display the industry sector
-              var industry = "";
-              if(naicsTable[dataTable[i].naics].length > 25)
-                industry = naicsTable[dataTable[i].naics].substring(0, 25) + "... "
-              else {
-                industry = naicsTable[dataTable[i].naics] + ": "
+              if(mode == 2) {
+                var industry = "";
+                if(naicsTable[dataTable[i].naics].length > 25)
+                  industry = naicsTable[dataTable[i].naics].substring(0, 25) + "... "
+                else {
+                  industry = naicsTable[dataTable[i].naics] + ": "
+                }
+                //d3.select("#infoTable1_Graph1").text("Releases:");
+                d3.select("#infoTable_Graph" + loc).text(industry + d3.format(",.8r")(d.value) + " lbs");
+                //console.log(naicsTable[data[i].naics]);
+              } else if(mode == 1) {
+                d3.select("#infoTable_Graph" + loc).text(dataTable[i].name + ": " + d3.format(",.8r")(d.value) + " lbs");
               }
-              //d3.select("#infoTable1_Graph1").text("Releases:");
-              d3.select("#infoTable_Graph1").text(industry + d3.format(",.8r")(d.value) + " lbs");
-              //console.log(naicsTable[data[i].naics]);
 
               var thisone = i;
-              d3.selectAll(".graph1Slice").style("opacity", function(d,i) {
+              d3.selectAll(".graph" + loc + "Slice").style("opacity", function(d,i) {
                 if(i == thisone) {
                   return 1;
                 } else {
@@ -3330,15 +3488,33 @@ function pieChart2(bounds) {
               })
             })
             .on("mouseout", function(d) {
-              d3.selectAll(".graph1Slice").style("opacity", 1);
-              d3.select("#infoTable_Graph1").text("");
+              d3.selectAll(".graph" + loc + "Slice").style("opacity", 1);
+              d3.select("#infoTable_Graph" + loc).text("");
             });
 
 
     arcs.append("svg:path")
             .attr("fill", function(d, i) {
-              // console.log(industryColor.range()[i]);
-              return industryColor(i);
+              if(mode == 2) {
+                // console.log(industryColor.range()[i]);
+                return industryColor(i);
+              } else if(mode == 1) {
+                switch(i) {
+                  case 0:
+                    return "red";
+                    break;
+                  case 1:
+                    return "green";
+                    break;
+                  case 2:
+                    return "purple";
+                    break;
+                  case 3:
+                    return "blue";
+                    break;
+                }
+              }
+
             })
             .attr("d", arc);
 
@@ -3356,12 +3532,16 @@ function pieChart2(bounds) {
           .attr("text-anchor", "middle")
           .attr("pointer-events", "none")
           .text(function(d, i) {
-              return (d.endAngle - d.startAngle > 1) ? naicsTable[dataTable[i].naics] : "";
+              if(mode == 2) {
+                return (d.endAngle - d.startAngle > 1) ? naicsTable[dataTable[i].naics] : "";
+              } else if(mode == 1) {
+                return (d.endAngle - d.startAngle > 1) ? dataTable[i].name : "";
+              }
           });
 
     auxSVG.append("text")
         .attr("transform", "translate(10, 140)")
-        .attr("id", "infoTable_Graph1")
+        .attr("id", "infoTable_Graph" + loc)
         .classed("graphChartTable", true)
         .text("");
 }
