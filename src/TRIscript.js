@@ -46,6 +46,10 @@ d3.selection.prototype.moveToFront = function() {
     });
 };
 
+// http://spin.js.org/#v2.3.2
+// SPIN
+!function(a,b){"object"==typeof module&&module.exports?module.exports=b():"function"==typeof define&&define.amd?define(b):a.Spinner=b()}(this,function(){"use strict";function a(a,b){var c,d=document.createElement(a||"div");for(c in b)d[c]=b[c];return d}function b(a){for(var b=1,c=arguments.length;c>b;b++)a.appendChild(arguments[b]);return a}function c(a,b,c,d){var e=["opacity",b,~~(100*a),c,d].join("-"),f=.01+c/d*100,g=Math.max(1-(1-a)/b*(100-f),a),h=j.substring(0,j.indexOf("Animation")).toLowerCase(),i=h&&"-"+h+"-"||"";return m[e]||(k.insertRule("@"+i+"keyframes "+e+"{0%{opacity:"+g+"}"+f+"%{opacity:"+a+"}"+(f+.01)+"%{opacity:1}"+(f+b)%100+"%{opacity:"+a+"}100%{opacity:"+g+"}}",k.cssRules.length),m[e]=1),e}function d(a,b){var c,d,e=a.style;if(b=b.charAt(0).toUpperCase()+b.slice(1),void 0!==e[b])return b;for(d=0;d<l.length;d++)if(c=l[d]+b,void 0!==e[c])return c}function e(a,b){for(var c in b)a.style[d(a,c)||c]=b[c];return a}function f(a){for(var b=1;b<arguments.length;b++){var c=arguments[b];for(var d in c)void 0===a[d]&&(a[d]=c[d])}return a}function g(a,b){return"string"==typeof a?a:a[b%a.length]}function h(a){this.opts=f(a||{},h.defaults,n)}function i(){function c(b,c){return a("<"+b+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',c)}k.addRule(".spin-vml","behavior:url(#default#VML)"),h.prototype.lines=function(a,d){function f(){return e(c("group",{coordsize:k+" "+k,coordorigin:-j+" "+-j}),{width:k,height:k})}function h(a,h,i){b(m,b(e(f(),{rotation:360/d.lines*a+"deg",left:~~h}),b(e(c("roundrect",{arcsize:d.corners}),{width:j,height:d.scale*d.width,left:d.scale*d.radius,top:-d.scale*d.width>>1,filter:i}),c("fill",{color:g(d.color,a),opacity:d.opacity}),c("stroke",{opacity:0}))))}var i,j=d.scale*(d.length+d.width),k=2*d.scale*j,l=-(d.width+d.length)*d.scale*2+"px",m=e(f(),{position:"absolute",top:l,left:l});if(d.shadow)for(i=1;i<=d.lines;i++)h(i,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(i=1;i<=d.lines;i++)h(i);return b(a,m)},h.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}}var j,k,l=["webkit","Moz","ms","O"],m={},n={lines:12,length:7,width:5,radius:10,scale:1,corners:1,color:"#000",opacity:.25,rotate:0,direction:1,speed:1,trail:100,fps:20,zIndex:2e9,className:"spinner",top:"50%",left:"50%",shadow:!1,hwaccel:!1,position:"absolute"};if(h.defaults={},f(h.prototype,{spin:function(b){this.stop();var c=this,d=c.opts,f=c.el=a(null,{className:d.className});if(e(f,{position:d.position,width:0,zIndex:d.zIndex,left:d.left,top:d.top}),b&&b.insertBefore(f,b.firstChild||null),f.setAttribute("role","progressbar"),c.lines(f,c.opts),!j){var g,h=0,i=(d.lines-1)*(1-d.direction)/2,k=d.fps,l=k/d.speed,m=(1-d.opacity)/(l*d.trail/100),n=l/d.lines;!function o(){h++;for(var a=0;a<d.lines;a++)g=Math.max(1-(h+(d.lines-a)*n)%l*m,d.opacity),c.opacity(f,a*d.direction+i,g,d);c.timeout=c.el&&setTimeout(o,~~(1e3/k))}()}return c},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=void 0),this},lines:function(d,f){function h(b,c){return e(a(),{position:"absolute",width:f.scale*(f.length+f.width)+"px",height:f.scale*f.width+"px",background:b,boxShadow:c,transformOrigin:"left",transform:"rotate("+~~(360/f.lines*k+f.rotate)+"deg) translate("+f.scale*f.radius+"px,0)",borderRadius:(f.corners*f.scale*f.width>>1)+"px"})}for(var i,k=0,l=(f.lines-1)*(1-f.direction)/2;k<f.lines;k++)i=e(a(),{position:"absolute",top:1+~(f.scale*f.width/2)+"px",transform:f.hwaccel?"translate3d(0,0,0)":"",opacity:f.opacity,animation:j&&c(f.opacity,f.trail,l+k*f.direction,f.lines)+" "+1/f.speed+"s linear infinite"}),f.shadow&&b(i,e(h("#000","0 0 4px #000"),{top:"2px"})),b(d,b(i,h(g(f.color,k),"0 0 1px rgba(0,0,0,.1)")));return d},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),"undefined"!=typeof document){k=function(){var c=a("style",{type:"text/css"});return b(document.getElementsByTagName("head")[0],c),c.sheet||c.styleSheet}();var o=e(a("group"),{behavior:"url(#default#VML)"});!d(o,"transform")&&o.adj?i():j=d(o,"animation")}return h});
+
 /////////////////////////////////////////////////////////////////////////////
 //
 //          G L O B A L S
@@ -187,7 +191,8 @@ var zoom = d3.behavior.zoom()
     // .on("zoom", throttle(zoomHandler, 50))
     .on("zoom", zoomHandler)
     .on("zoomstart", zoomstart)
-    .on("zoomend", debounce(zoomend, 2000))
+    // .on("zoomend", debounce(zoomend, 2000))
+    .on("zoomend", zoomend)
     zoom.scale(1)
     zoom.translate(translate);
 
@@ -205,7 +210,9 @@ var quadtree = d3.geom.quadtree()
 var facilityColor = d3.scale.quantize()
     .range(colorbrewer.RdYlGn[9]);
 
-var industryColor = d3.scale.category20().domain(0,19);
+//var industryColor = d3.scale.category20().domain(0,19);
+var industryColor = d3.scale.ordinal()
+    .range(colorbrewer.Paired[12]);
 
 // Color scale for states
 var stateColor = d3.scale.quantize()
@@ -251,9 +258,9 @@ overlayExplorationOptions = {
       {"name": "(release / usage)", "color": "black", "toggled": false, "stackable": false},
       {"name": "releases", "color": "red", "toggled": false, "stackable": true},
       {"name": "recycling", "color": "green", "toggled": false, "stackable": true},
-      {"name": "treatment", "color": "purple", "toggled": false, "stackable": true},
-      {"name": "recovery", "color": "blue", "toggled": false, "stackable": true},
-      {"name": "(release - other 3)", "color": "darkgreen", "toggled": false, "stackable": false},
+      {"name": "treatment", "color": "yellow", "toggled": false, "stackable": true},
+      {"name": "recovery", "color": "#3399FF", "toggled": false, "stackable": true},
+      //{"name": "(release - other 3)", "color": "darkgreen", "toggled": false, "stackable": false},
       {"name": "none", "color": "tan", "toggled": false, "stackable": false}
     ],
     "toggle": function(id) {
@@ -720,7 +727,14 @@ function clickedBackground() {
 
     fac.classed("clickThrough", false);
     states.classed("highlight", false)
-      .attr("stroke-width", strokeWidth);
+      .attr("stroke-width", function(d) {
+        if(selectedStates.contains(d.id))
+          return (strokeWidth*5)/scaleFactor;
+        return (strokeWidth*2)/scaleFactor;
+
+      });
+
+
 
     d3.select("#auxiliaryInfoTab").style("opacity", 0);
     d3.select("#pieChart_Graph1").selectAll("*").remove();
@@ -777,26 +791,39 @@ function reorderLayers() {
 //          Z O O M   E V E N T S
 //
 /////////////////////////////////////////////////////////////////////////////
-
+var showingFacilities = false;
 function zoomstart() {
+  // console.log("zoomstart");
      currentComparison = null;
-     fac.on("mouseover", null);
+    // fac.on("mouseover", null);
     // counties.attr("display", "none");
-    fac.attr("display", "none");
+  //  fac.attr("display", "none");
+  // if(showingFacilities) {
+  //   hideFacilities();
+  //     showingFacilities = false;
+  // }
 }
 
 function zoomHandler() {
+  if(showingFacilities) {
+    hideFacilities();
+      showingFacilities = false;
+  }
   //  fac.attr("display", "none");
 
     if(d3.event) {
       translate = d3.event.translate;
       scaleFactor = d3.event.scale;
+    } else {
+      conosle.log('blip');
+      return;
     }
 
     stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
     states.attr("stroke-width", function(d) {
+      if(selectedStates.contains(d.id))
+        return (strokeWidth*5)/scaleFactor;
       return (strokeWidth*2)/scaleFactor;
-      //TODO: scale this depending on whether a state is highlighted
     });
 
     // usaLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
@@ -804,7 +831,7 @@ function zoomHandler() {
 }
 
 function zoomend() {
-  console.log("zoomend");
+  //console.log("zoomend");
   //   clearBrush();
   // //  quadTreeLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
   //   facilityLayer.attr("transform", "translate(" + translate + ")scale(" + scaleFactor + ")");
@@ -822,24 +849,25 @@ function zoomend() {
   //   fac.on("mouseover", hover);
     //counties.attr("display", "inline");
 
-    clearBrush();
+    //clearBrush();
     // stateLines.attr("stroke-width", (strokeWidth*2)/scaleFactor);
     // states.attr("stroke-width", function(d) {
     //   return (strokeWidth*2)/scaleFactor;
     //   //TODO: scale this depending on whether a state is highlighted
     // });
 
-    displayFacilities();
+    //displayFacilities();
 
-    if(toolContext == ("brush") && (!event || !event.shiftKey)) {
-        clearEffects();
-        currentComparison = null;
-        brushLayer.moveToFront();
-        d3.selectAll(".brush").call(brush.clear());
-        d3.select(".brush")
-            .style("display", "block");
-        toolContext = "brush";
-    }
+    // if(toolContext == ("brush") && (!event || !event.shiftKey)) {
+    //   console.log("sucks");
+    //     clearEffects();
+    //     currentComparison = null;
+    //     brushLayer.moveToFront();
+    //     d3.selectAll(".brush").call(brush.clear());
+    //     d3.select(".brush")
+    //         .style("display", "block");
+    //     toolContext = "brush";
+    // }
 }
 
 
@@ -857,9 +885,9 @@ d3.json("data/us.json", function(error, us) {
     .enter().append("path")
       .attr("d", path)
       .attr("class", "feature")
-      .on("mousedown", function() {
-        d3.event.stopPropagation();
-      })
+      // .on("mousedown", function() {
+      //   d3.event.stopPropagation();
+      // })
       .on("click", function(d) {
         if (d3.event.defaultPrevented) return;
         clickedState(d);
@@ -990,10 +1018,10 @@ function generateStateColors(fixedDomain) {
             stateRatios[state].comparison = stateRatios[state].totalRecovery;// / stateRatios[state].numFacilities;
             stateDomain.push(stateRatios[state].comparison);
             break;
-          case 5:   // Recycling value
-            stateRatios[state].comparison = stateRatios[state].totalRecovery - (stateRatios[state].totalRecycling + stateRatios[state].totalTreatment + stateRatios[state].totalRecovery);// / stateRatios[state].numFacilities;
-            stateDomain.push(stateRatios[state].comparison);
-            break;
+          // case 5:   // Recycling value
+          //   stateRatios[state].comparison = stateRatios[state].totalRecovery - (stateRatios[state].totalRecycling + stateRatios[state].totalTreatment + stateRatios[state].totalRecovery);// / stateRatios[state].numFacilities;
+          //   stateDomain.push(stateRatios[state].comparison);
+          //   break;
         }
 
           tmp.push([state, stateRatios[state].comparison]);
@@ -1038,7 +1066,7 @@ function generateStateColors(fixedDomain) {
         break;
       case "treatment":
       case 3:   // Treatment value
-        stateColor.range(colorbrewer.Purples[9]);
+        stateColor.range(colorbrewer.YlOrRd[9]);
         stateColor.domain([stateDomainMin, stateDomainMax]);
         applyStateColors();
         break;
@@ -1088,7 +1116,7 @@ function applyStateColors(arg) {
 
 
 function clickedState(d) {
-
+  // console.log("state");
     showGraph(1);
     if(event.shiftKey)
       addState(d);
@@ -1226,7 +1254,7 @@ function highlightState(d) {
 
         states.classed("fade", function(d) { return d.id != thisState;  });
         states.classed("highlight", function(d) { return d.id == thisState; })
-          .attr("stroke-width", function(d) { return (d.id == thisState) ? (strokeWidth * 10)/scaleFactor : strokeWidth; });
+          .attr("stroke-width", function(d) { return (d.id == thisState) ? (strokeWidth * 5)/scaleFactor : strokeWidth; });
         fac.classed("fade", function(d) { return d.state != thisState; });
         fac.classed("selected", function(d) { return d.state == thisState; });
         fac.each(function(d, i) { if(d.state == thisState) {addFacilityToTotal(d, i); } });
@@ -1625,6 +1653,8 @@ d3.json("data/facilities.json", function(error, f) {
         ///
         .call(zoom);
 
+        stopSpinner();
+
 });
 
 // Collapse the quadtree into an array of rectangles.
@@ -1838,6 +1868,13 @@ function displayFacilities() {
 
   fac.attr("display", "block");
   fac.on("mouseover", hover);
+
+  showingFacilities = true;
+}
+
+function hideFacilities() {
+  fac.attr("display", "none");
+  fac.on("mouseover", null);
 }
 
 
@@ -2260,14 +2297,14 @@ function initializeLineGraphs() {
       });
   treatmentLine[0] = graph1.append('svg:path')
       .attr('d', lineGen(currentGraphData1.treatment))
-      .attr('stroke', 'purple')
+      .attr('stroke', 'yellow')
       .classed('lineChart', true)
       .classed('deselected', function(d) {
           return !keySelected[3].value
       });
   recoveryLine[0] = graph1.append('svg:path')
      .attr('d', lineGen(currentGraphData1.recovery))
-     .attr('stroke', 'blue')
+     .attr('stroke', '#3399FF')
      .classed('lineChart', true)
      .classed('deselected', function(d) {
          return !keySelected[4].value
@@ -2289,14 +2326,14 @@ function initializeLineGraphs() {
      });
   treatmentLine[1] = graph2.append('svg:path')
      .attr('d', lineGen(currentGraphData1.treatment))
-     .attr('stroke', 'purple')
+     .attr('stroke', 'yellow')
      .classed('lineChart', true)
      .classed('deselected', function(d) {
          return !keySelected[3].value
      });
   recoveryLine[1] = graph2.append('svg:path')
     .attr('d', lineGen(currentGraphData1.recovery))
-    .attr('stroke', 'blue')
+    .attr('stroke', '#3399FF')
     .classed('lineChart', true)
     .classed('deselected', function(d) {
         return !keySelected[4].value
@@ -2462,6 +2499,7 @@ function lineGraph(d, id) {
     ]);
 
     // Scale both graphs appropriately
+    // TODO: recompute both domains dynamically rather than saving variables
     if(showingGraphTwo) {
 
       if(!largerYScale) {
@@ -2889,6 +2927,7 @@ function throttle(fn, threshhold, scope) {
 ////////////////////////////////////////////////////////////
 
 function init() {
+    startSpinner();
 //    console.log("init!");
     bindKeys();
 //    updateStack();
@@ -2900,6 +2939,42 @@ function init() {
 
     graphs = initializeLineGraphs();
     hideGraph();
+}
+
+var spinner = null;
+function startSpinner() {
+  var opts = {
+      lines: 17 // The number of lines to draw
+    , length: 0 // The length of each line
+    , width: 10 // The line thickness
+    , radius: 50 // The radius of the inner circle
+    , scale: 1 // Scales overall size of the spinner
+    , corners: 9.7 // Corner roundness (0..1)
+    , color: '#000' // #rgb or #rrggbb or array of colors
+    , opacity: 0.0 // Opacity of the lines
+    , rotate: 0 // The rotation offset
+    , direction: 1 // 1: clockwise, -1: counterclockwise
+    , speed: 0.8 // Rounds per second
+    , trail: 91 // Afterglow percentage
+    , fps: 20 // Frames per second when using setTimeout() as a fallback for CSS
+    , zIndex: 2e9 // The z-index (defaults to 2000000000)
+    , className: 'spinner' // The CSS class to assign to the spinner
+    , top: '29%' // Top position relative to parent
+    , left: '50%' // Left position relative to parent
+    , shadow: true // Whether to render a shadow
+    , hwaccel: true // Whether to use hardware acceleration
+    , position: 'absolute' // Element positioning
+    }
+  spinner = new Spinner(opts).spin()
+  document.getElementById('container').appendChild(spinner.el)
+
+  d3.select('#map').style("display", "none");
+}
+
+function stopSpinner() {
+  console.log("TODO: remove event handlers while spinning")
+  d3.select('#map').style("display", "block");
+  spinner.stop();
 }
 
 
@@ -2989,7 +3064,8 @@ function bindKeys() {
             //console.log(currentComparison, compareList.data);
             //toggleExplorationTab();
             colorFacilities(1);
-            fac.attr("display", "default")
+            // fac.attr("display", "default")
+            displayFacilities();
         }
 
         // SIX
@@ -2997,13 +3073,21 @@ function bindKeys() {
             //console.log(currentComparison, compareList.data);
             //toggleExplorationTab();
             colorFacilities(2);
-            fac.attr("display", "default")
+            // fac.attr("display", "default")
+            displayFacilities();
             //toggleAuxilliaryTab();
         }
 
         // SEVEN
         if( d3.event.keyCode === 55) {
             displayFacilities();
+
+        }
+
+        // EIGHT
+        if( d3.event.keyCode === 56) {
+            hideFacilities();
+            showingFacilities = false;
 
         }
 
@@ -3310,6 +3394,10 @@ function pieChart2(bounds, mode, loc) {
         break;
     }
   } else if(loc == 2) {
+    if(compareList.data.length == 0)
+      return;
+
+
     console.log(compareList.data[compareList.pos].collection);
     switch(compareList.data[compareList.pos].type) {
       case "states":
@@ -3507,10 +3595,10 @@ function pieChart2(bounds, mode, loc) {
                     return "green";
                     break;
                   case 2:
-                    return "purple";
+                    return "yellow";
                     break;
                   case 3:
-                    return "blue";
+                    return "#3399FF";
                     break;
                 }
               }
