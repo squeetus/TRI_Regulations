@@ -210,9 +210,9 @@ var quadtree = d3.geom.quadtree()
 var facilityColor = d3.scale.quantize()
     .range(colorbrewer.RdYlGn[9]);
 
-//var industryColor = d3.scale.category20().domain(0,19);
-var industryColor = d3.scale.ordinal()
-    .range(colorbrewer.Paired[12]);
+var industryColor = d3.scale.category20().domain(0,19);
+//var industryColor = d3.scale.ordinal()
+//    .range(colorbrewer.Paired[12]);
 
 // Color scale for states
 var stateColor = d3.scale.quantize()
@@ -317,10 +317,41 @@ var explorationTools = d3.select("#explorationTools").insert("svg", "#exploratio
 
   d3.select("#overlayExplorationToolsSVG")
       .append("text")
-      .attr("y", 15)
+      .attr("y", 20)
       .attr("x", 35)
-      .text("State Overlay Options");
+      .text("Overlay Options Panel");
+//TEMPORARY: SETTING UP BUTTONS FOR STATE/FACILITY
+  d3.select("#overlayExplorationToolsSVG")
+      .append("svg:rect")
+      .attr("y", 32)
+      .attr("x", 0)
+      .attr("width", 100)
+      .attr("height", 25)
+      .style("fill", "lightgrey")
+      .style("opacity", 0.5);
 
+  d3.select("#overlayExplorationToolsSVG")
+      .append("text")
+      .attr("y", 49)
+      .attr("x", 22)
+      .style("opacity", 0.5)
+      .text("Facilities");
+
+  d3.select("#overlayExplorationToolsSVG")
+      .append("svg:rect")
+      .attr("y", 32)
+      .attr("x", 100)
+      .attr("width", 200)
+      .attr("height", 25)
+      .attr("stroke", "darkgrey")
+      .style("fill", "lightgrey")
+
+    d3.select("#overlayExplorationToolsSVG")
+        .append("text")
+        .attr("y", 49)
+        .attr("x", 125)
+        .text("States");
+////////
 var explorationToolIcons = explorationTools
       .append('rect')
       .attr("x", 25)
@@ -626,12 +657,12 @@ function toggleExplorationTab() {
         .transition("fadeIn").duration(500).delay(500)
         .attr("width", 20)
         .attr("height", 20)
-        .attr("y", function(d,i) { return 40 + i * 22; });
+        .attr("y", function(d,i) { return 70 + i * 22; });
 
     explorationToolText
         .transition("fadeIn").duration(500).delay(500)
         .attr("x", 55)
-        .attr("y", function(d,i) { return 53 + i * 22; })
+        .attr("y", function(d,i) { return 83 + i * 22; })
         .text(function(d, i) {
           return d.name;
         })
@@ -1470,7 +1501,7 @@ function clearState() {
 //var facilityLayer = svg.append("g")
 //    .style("stroke-width", "1.5px");
 
-d3.json("data/facilities.json", function(error, f) {
+d3.json("data/BIGfacilities.json", function(error, f) {
     if(error)
         console.log(error);
 
@@ -1787,7 +1818,7 @@ function colorFacilities(arg) {
     d3.select("#auxiliaryInfoSVG1").selectAll("*").remove();
     var auxSVG = d3.select("#auxiliaryInfoSVG1");
 
-    var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", "-1"];
+    var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", -1];
     var tmpData = null;
     switch(arg) {
         case 0:
@@ -2143,11 +2174,18 @@ function updateKey(id) {
       }
     }
 
-    if(currentComparison)
-      pieChart2();
-    if(compareList)
-      pieChart2(null, null, 2);
-
+    // Update pie charts with current brush extent
+    var currentExtent = graphs.graphBrush.extent();
+    if(currentExtent[0] == currentExtent[1])
+        currentExtent = [1986, 2013]
+    
+    if(currentComparison) {
+      pieChart2(currentExtent);
+    
+    }
+    if(compareList) {
+      pieChart2(currentExtent, null, 2);
+    }
 
 
 }
@@ -2164,7 +2202,12 @@ function initializeLineGraphs() {
   graph1 = d3.select("#graph1")
     .attr("width", width-250)
     .attr("height", 150)
-    .attr("opacity", 0);
+    .attr("opacity", 0)
+//  TODO  .on("dblclick", function() {
+//      console.log("HI");
+//         graphs.graphBrush.clear();
+//      d3.selectAll("#graphBrush1").call(graphs.graphBrush);
+//    });
     // .on("mouseover", graphHover)
     // .on("mousemove", graphMove)
     // .on("mouseout", graphOut);
@@ -2173,12 +2216,13 @@ function initializeLineGraphs() {
       .attr("x", 150)
       .attr("width", width-250)
       .attr("height", 150)
-      .attr("opacity", 1);
+      .attr("opacity", 1)
+        //.on("dblclick", function() {console.log("HI");});
       // .on("mouseover", graphHover)
       // .on("mousemove", graphMove)
       // .on("mouseout", graphOut);
 
-  var xScale = d3.scale.linear().range([144, width-300]).domain([1987, 2013]).clamp(true);
+  var xScale = d3.scale.linear().range([144, width-300]).domain([1986, 2013]).clamp(true);
   var yScale = d3.scale.linear().range([150-25, 25]).domain([0,0]);
   var legendScale = d3.scale.linear().range([0, 75]).domain([0, 100,000,000]).clamp(true);
 
@@ -2186,7 +2230,8 @@ function initializeLineGraphs() {
           .x(xScale)
           // .classed(".graphBrush")
           // .on("brush", graphBrushed);
-          .on("brushend", graphBrushEnded);
+          .on("brushend", graphBrushEnded)
+//          
 
   d3.select("#graph1").append("g")
             .attr("id", "graphBrush1")
@@ -2389,16 +2434,212 @@ function graphBrushed() {
 
 function graphBrushEnded() {
   if (!d3.event.sourceEvent) return; // only transition after input
-
+//  if(!currentComparison && !showingGraphTwo) 
+//      return; 
+    
   var extent0 = graphs.graphBrush.extent(),
       extent1 = extent0.map(Math.round);
+    
+  var LARGER = [-1, -1, -1, -1];    
 
   // if empty when rounded, use floor & ceil instead
   if (extent1[0] >= extent1[1]) {
     extent1[0] = Math.floor(extent0[0]);
     extent1[1] = Math.ceil(extent0[1]);
   }
-  console.log(d3.select(this));
+    
+//  graphs.xScale.domain(extent1);
+//    console.log(extent1);
+//  d3.select("#graph1").select(".x.axis").call(graphs.xAxis);
+//    
+   // #####
+
+  // 0 is current comparison, 1 is saved comparison
+  var tmpUsageVars = [{
+    "releases": 0,
+    "recycling": 0,
+    "treatment": 0,
+    "recovery": 0
+  },
+  {
+    "releases": 0,
+    "recycling": 0,
+    "treatment": 0,
+    "recovery": 0
+  }]
+                     
+//console.log(currentComparison, currentComparison.data.length);
+  if(currentComparison) {
+      for(var i = (extent1[0] - 1986); i < (extent1[1] - 1986); i++) {
+        tmpUsageVars[0].releases += currentComparison.data.releases[i];
+        tmpUsageVars[0].recycling += currentComparison.data.recycling[i];
+        tmpUsageVars[0].treatment += currentComparison.data.treatment[i];
+        tmpUsageVars[0].recovery += currentComparison.data.recovery[i];
+      }
+  }
+    
+  if(showingGraphTwo) {
+      
+    for(var i = (extent1[0] - 1986); i < (extent1[1] - 1986); i++) {  
+        tmpUsageVars[1].releases += compareList.data[compareList.pos].data.releases[i];
+        tmpUsageVars[1].recycling += compareList.data[compareList.pos].data.recycling[i];
+        tmpUsageVars[1].treatment += compareList.data[compareList.pos].data.treatment[i];
+        tmpUsageVars[1].recovery += compareList.data[compareList.pos].data.recovery[i];
+    }
+      
+    if (tmpUsageVars[0].releases > tmpUsageVars[1].releases) 
+        LARGER[0] = 0
+    else if(tmpUsageVars[0].releases < tmpUsageVars[1].releases) 
+        LARGER[0] = 1;
+      
+    if (tmpUsageVars[0].recycling > tmpUsageVars[1].recycling) 
+        LARGER[1] = 0
+    else if(tmpUsageVars[0].recycling < tmpUsageVars[1].recycling) 
+        LARGER[1] = 1;
+      
+    if (tmpUsageVars[0].treatment > tmpUsageVars[1].treatment) 
+        LARGER[2] = 0
+    else if(tmpUsageVars[0].treatment < tmpUsageVars[1].treatment) 
+        LARGER[2] = 1;
+      
+    if (tmpUsageVars[0].recovery > tmpUsageVars[1].recovery) 
+        LARGER[3] = 0
+    else if(tmpUsageVars[0].recovery < tmpUsageVars[1].recovery) 
+        LARGER[3] = 1;    
+  }
+//    LARGER[1] = (tmpUsageVars[0].recycling > tmpUsageVars[1].recycling) ? 0 : 1; 
+//    LARGER[2] = (tmpUsageVars[0].treatment > tmpUsageVars[1].treatment) ? 0 : 1;
+//    LARGER[3] = (tmpUsageVars[0].recovery > tmpUsageVars[1].recovery) ? 0 : 1;
+//  } else {
+//    LARGER = null;   
+//  }
+  
+  d3.select("#auxiliaryInfoTab").transition("auxDataTabResize").duration(250)
+          .style("height", "300px")
+  
+  //Hacky way ...
+  var auxSVG = d3.select("#auxiliaryInfoSVG1");
+    auxSVG.selectAll("#HELLO").remove();
+    
+  auxSVG.append("text")
+    .attr("id", "HELLO")
+    .attr("y", 225)
+    .attr("x", 10)
+    .text("Current Selection");
+    
+
+    
+  auxSVG.append("text")
+    .attr("id", "HELLO")
+    .attr("y", 240)
+    .attr("x", 10)
+    .attr("opacity", function() { 
+        if(LARGER[0] == 1)
+            return "0.5";
+        else
+            return "1";
+             })
+    .text("Releases: \t" + d3.format(",.3f")(tmpUsageVars[0].releases)); 
+  auxSVG.append("text")
+    .attr("id", "HELLO")
+    .attr("y", 250)
+    .attr("x", 10)
+    .attr("opacity", function() { 
+        if(LARGER[1] == 1)
+            return "0.5";
+        else 
+            return "1";
+         })
+    .text("Recycling: \t" + d3.format(",.3f")(tmpUsageVars[0].recycling)); 
+  auxSVG.append("text")
+    .attr("id", "HELLO")
+    .attr("y", 260)
+    .attr("x", 10)
+    .attr("opacity", function() { 
+        if(LARGER[2] == 1)
+            return "0.5";
+        else 
+            return "1";
+         })
+    .text("Treatment: \t" + d3.format(",.3f")(tmpUsageVars[0].treatment));
+  auxSVG.append("text")
+    .attr("id", "HELLO")
+    .attr("y", 270)
+    .attr("x", 10)
+    .attr("opacity", function() { 
+        if(LARGER[3] == 1)
+            return "0.5";
+        else 
+            return "1";
+         })
+    .text("Recovery: \t" + d3.format(",.3f")(tmpUsageVars[0].recovery));
+
+    
+//  if(compareList.data.length > 0)    
+    if(showingGraphTwo) {
+       
+          d3.select("#auxiliaryInfoTab").transition("auxDataTabResize").duration(250)
+          .style("height", "360px")
+        
+        auxSVG.append("text")
+            .attr("id", "HELLO")
+            .attr("y", 290)
+            .attr("x", 10)
+            .text("Saved Selection");
+
+          auxSVG.append("text")
+            .attr("id", "HELLO")
+            .attr("y", 305)
+            .attr("x", 10)
+            .attr("opacity", function() { 
+                if(LARGER[0] == 0)
+                    return "0.5";
+                else 
+                    return "1";
+                 })
+            .text("Releases: \t" + d3.format(",.3f")(tmpUsageVars[1].releases)); 
+          auxSVG.append("text")
+            .attr("id", "HELLO")
+            .attr("y", 315)
+            .attr("x", 10)
+            .attr("opacity", function() { 
+                if(LARGER[1] == 0)
+                    return "0.5";
+                else 
+                    return "1";
+                 })
+            .text("Recycling: \t" + d3.format(",.3f")(tmpUsageVars[1].recycling)); 
+          auxSVG.append("text")
+            .attr("id", "HELLO")
+            .attr("y", 325)
+            .attr("x", 10)
+            .text("Treatment: \t" + d3.format(",.3f")(tmpUsageVars[1].treatment))
+            .attr("opacity", function() { 
+                if(LARGER[2] == 0)
+                    return "0.5";
+                else 
+                    return "1";
+                 });
+          auxSVG.append("text")
+            .attr("id", "HELLO")
+            .attr("y", 335)
+            .attr("x", 10)
+            .attr("opacity", function() { 
+                if(LARGER[3] == 0)
+                    return "0.5";
+                else 
+                    return "1";
+                 })
+            .text("Recovery: \t" + d3.format(",.3f")(tmpUsageVars[1].recovery));
+        
+        
+    } else {
+          d3.select("#auxiliaryInfoTab").transition("auxDataTabResize").duration(250)
+          .style("height", "300px")   
+    }
+  // Send data from brushed region to aux data panel
+        
+    
   d3.select("#graphBrush1").transition("brushResize").duration(250)
       .call(graphs.graphBrush.extent(extent1))
       .call(graphs.graphBrush.event);
@@ -2408,78 +2649,10 @@ function graphBrushEnded() {
       .call(graphs.graphBrush.event);
 
   pieChart2(extent1);
-  pieChart2(extent1, null, 2);
+  
+  if(showingGraphTwo)    
+    pieChart2(extent1, null, 2);
 }
-
-// function graphHover() {
-//   if(d3.select("#graph1").style("opacity") > 0)
-//     d3.select("#graphLine")
-//       .classed("hidden", false);
-// }
-//
-// function graphOut() {
-//   d3.select("#graphLine")
-//       .classed("hidden", true);
-// }
-//
-// // var graphHoverRectangle = d3.select("#graphs").append("path").attr("class", "area");
-// var graphHoverRectangle = d3.select("#graphLine").append("svg:rect").attr("class", "area");
-// var graphHoverRectangle2 = d3.select("#graphLine").append("svg:rect").attr("class", "area");
-//
-//
-// function graphMove() {
-//   if(d3.select("#graph1").style("opacity") == 0)
-//     return;
-//
-//   var m = d3.mouse(this),
-//    thisYear = Math.floor(graphs.xScale.invert(m[0]));
-//   var bounds = [
-//     Math.floor(graphs.xScale(thisYear)),
-//     Math.floor(graphs.xScale(thisYear+1))
-//   ]
-//
-//
-//   if(bounds[0] != graphHoverRectangle.attr("x")) {
-//
-//     graphHoverRectangle
-//         .attr("x", function() { return bounds[0]; })
-//         .attr("y", 25)
-//         .attr("width", bounds[1]-bounds[0])
-//         .attr("height", 150)
-//
-//     //INFORMATION FROM LINEGRAPH hover
-//     if(currentComparison)
-//       console.log({
-//           "year": thisYear,
-//           "releases": currentComparison.data.releases[thisYear-1987],
-//           "recycling": currentComparison.data.recycling[thisYear-1987],
-//           "treatment": currentComparison.data.treatment[thisYear-1987],
-//           "recovery": currentComparison.data.recovery[thisYear-1987]
-//       });
-//
-//
-//     if(showingGraphTwo) {
-//         console.log({
-//             "year": thisYear,
-//             "releases": compareList.data[compareList.pos].data.releases[thisYear-1987],
-//             "recycling": compareList.data[compareList.pos].data.recycling[thisYear-1987],
-//             "treatment": compareList.data[compareList.pos].data.treatment[thisYear-1987],
-//             "recovery": compareList.data[compareList.pos].data.recovery[thisYear-1987]
-//         });
-//         graphHoverRectangle2
-//           .classed("hidden", false);
-//
-//         graphHoverRectangle2
-//             .attr("x", function() { return bounds[0]; })
-//             .attr("y", 175)
-//             .attr("width", 32)
-//             .attr("height", 150)
-//     } else {
-//         graphHoverRectangle2
-//           .classed("hidden", true);
-//     }
-//   }
-// }
 
 function lineGraph(d, id) {
     if(!id)
@@ -2532,7 +2705,7 @@ function lineGraph(d, id) {
     graph.select(".y.axis").transition().duration(1000).call(graphs.yAxis);
 
     yGrid = yAxis.ticks(5)
-      .tickSize(width-200, 0)
+      .tickSize(width-150-300, 0)
       .tickFormat("")
       .orient("right");
 
@@ -2589,7 +2762,7 @@ function resizeGraph(yScaleDomain, id) {
     //g2.selectAll(".y.axis").transition().duration(1000).call(newAxis);
 
     var newYAxisGrid = newAxis.ticks(5)
-      .tickSize(width-200, 0)
+      .tickSize(width-150-300, 0)
       .tickFormat("")
       .orient("right");
 
@@ -3091,10 +3264,10 @@ function bindKeys() {
 
         }
 
-        // <
+        // < LEFT
         if( d3.event.keyCode === 37) {
           var bounds = graphs.graphBrush.extent();
-          if((bounds[0] == bounds[1]) || (bounds[0] <= 1987)) {
+          if((bounds[0] == bounds[1]) || (bounds[0] <= 1986)) {
             return;
           } else {
               graphs.graphBrush.extent([bounds[0]-1, bounds[1]-1]);
@@ -3106,7 +3279,7 @@ function bindKeys() {
 
         }
 
-        // >
+        // > RIGHT
         if( d3.event.keyCode === 39) {
             var bounds = graphs.graphBrush.extent();
             if((bounds[0] == bounds[1]) || (bounds[1] >= 2013)) {
@@ -3164,7 +3337,7 @@ function bindKeys() {
 function pieChart(data) {
 
   var r = 75;
-  var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", "-1"];
+  var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", -1];
   var naicsCountTable = [
     {"naics": "11", "number": 0},
     {"naics": "21", "number": 0},
@@ -3183,7 +3356,7 @@ function pieChart(data) {
     {"naics": "71", "number": 0},
     {"naics": "81", "number": 0},
     {"naics": "92", "number": 0},
-    {"naics": "-1", "number": 0},
+    {"naics": -1, "number": 0},
   ]
 
   var facilities = fac.filter(function(d) { return selectedStates.array.indexOf(d.state) >= 0; })
@@ -3297,7 +3470,7 @@ function pieChart2(bounds, mode, loc) {
 
   var r = 50,
       facilities = null;
-  var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", "-1"];
+  var industryLookup = ["11", "21", "22", "23", "33", "42", "45", "49", "51", "53", "54", "55", "56", "62", "71", "81", "92", -1];
   var dataTable = [
     {"naics": "11", "value": 0},
     {"naics": "21", "value": 0},
@@ -3316,16 +3489,22 @@ function pieChart2(bounds, mode, loc) {
     {"naics": "71", "value": 0},
     {"naics": "81", "value": 0},
     {"naics": "92", "value": 0},
-    {"naics": "-1", "value": 0},
+    {"naics": -1, "value": 0},
   ]
 
   mode = 2; //states
   if(loc == 1) {
     switch(currentComparison.type) {
-      case "states":
+      case "states":  
+            
         facilities = fac.filter(function(d) { return selectedStates.array.indexOf(d.state) >= 0; })
+//        console.log(facilities.size());
+            
+    
         var updateCount = 0;
-        facilities.each(function(d) {
+
+        facilities.each(function(d) {  
+            
           for (var i=0; i < dataTable.length; i++) {
               if (dataTable[i].naics === d.NAICS) {
                   for(var j= (bounds[0]- 1986); j < (bounds[1] - 1986); j++) {
@@ -3350,11 +3529,14 @@ function pieChart2(bounds, mode, loc) {
               }
           }
         });
+           
+//        console.log(updateCount);
 
-        if(updateCount == 0) {
-          d3.select("#pieChart_Graph1").selectAll("*").remove();
-          return;
-        }
+//        if(updateCount == 0) {
+//            console.log("no data");
+//          //d3.select("#pieChart_Graph1").selectAll("*").remove();
+//         // return;
+//        }
         break;
       case "facility":
         mode = 1; // facilities
@@ -3383,10 +3565,10 @@ function pieChart2(bounds, mode, loc) {
           updateCount += currentComparison.data.recovery[j];
         }
 
-        if(updateCount == 0) {
-          d3.select("#pieChart_Graph1").selectAll("*").remove();
-          return;
-        }
+//        if(updateCount == 0) {
+//          d3.select("#pieChart_Graph1").selectAll("*").remove();
+//          return;
+//        }
 
         break;
       case "brush":
@@ -3398,10 +3580,10 @@ function pieChart2(bounds, mode, loc) {
       return;
 
 
-    console.log(compareList.data[compareList.pos].collection);
+//    console.log(compareList.data[compareList.pos].collection);
     switch(compareList.data[compareList.pos].type) {
       case "states":
-        facilities = fac.filter(function(d) { return compareList.data[compareList.pos].collection.indexOf(d.state) >= 0; })
+        facilities = fac.filter(function(d) { return compareList.data[compareList.pos].collection.indexOf(d.state) >= 0; }) 
         var updateCount = 0;
         facilities.each(function(d) {
           for (var i=0; i < dataTable.length; i++) {
@@ -3429,10 +3611,10 @@ function pieChart2(bounds, mode, loc) {
           }
         });
 
-        if(updateCount == 0) {
-          d3.select("#pieChart_Graph2").selectAll("*").remove();
-          return;
-        }
+//        if(updateCount == 0) {
+////          d3.select("#pieChart_Graph2").selectAll("*").remove();
+////          return;
+//        }
         break;
       case "facility":
         mode = 1; // facilities
@@ -3461,10 +3643,10 @@ function pieChart2(bounds, mode, loc) {
           updateCount += compareList.data[compareList.pos].data.recovery[j];
         }
 
-        if(updateCount == 0) {
-          d3.select("#pieChart_Graph2").selectAll("*").remove();
-          return;
-        }
+//        if(updateCount == 0) {
+//          d3.select("#pieChart_Graph2").selectAll("*").remove();
+//          return;
+//        }
 
         break;
       case "brush":
@@ -3472,6 +3654,7 @@ function pieChart2(bounds, mode, loc) {
         break;
     }
 }
+    
 
   //toggleAuxilliaryTab(1);
   d3.select("#pieChart_Graph" + loc).selectAll("*").remove();
@@ -3490,6 +3673,9 @@ function pieChart2(bounds, mode, loc) {
           var title = "";
           if(keySelected.numSelected() == 4)
             return "Total Usage";
+          else if(keySelected.numSelected() == 0) {
+            return "None Selected";
+          }
           else {
             if(keySelected[1].value) {
               title += "Releases "
@@ -3519,7 +3705,7 @@ function pieChart2(bounds, mode, loc) {
           }
         } else if(mode == 1) {
           return "Usage"
-        }
+        } 
 
 
 
@@ -3533,6 +3719,18 @@ function pieChart2(bounds, mode, loc) {
         return (bounds[0]) + " - " + (bounds[1]);
       });
 
+      if(updateCount == 0) {
+           auxSVG.append("text")
+              .attr("transform", "translate(10, 45)")
+              .attr("id", "infoTable3_Graph" + loc)
+              .classed("graphChartTable", true)
+              .text("No Data in Selection");
+//            console.log("no data");
+          //d3.select("#pieChart_Graph1").selectAll("*").remove();
+          return;
+    }
+    
+//console.log(dataTable);    
   var pieChartArea = auxSVG
     .data([dataTable])
     .append("svg:g")
