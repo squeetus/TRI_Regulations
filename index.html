@@ -1,78 +1,28 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-    <link rel="stylesheet" type="text/css" href="src/TRIstyle.css">
+    <link rel="stylesheet" type="text/css" href="src/styles/style.css">
 </head>
+
 
 <body>
 <div id="container">
 
-    <div id="title"><h1>Toxics Release Inventory</h1></div>
-
-    <svg id="map"></svg>
-    <div id="applicationInfo">
-      Mode: <span id="mode">Select (1)</span>
-      <!-- <span id="mode">Mode: </span> -->
-    </div>
-
-    <div id="graphs" class="no_selection">
-      <div id="key" class="no_selection">
-          <div class="keyElement" style="background-color: red;" id="keyReleases">
-              <!-- <div class="keyButton" ></div> -->
-              <span class="keyElementText" style="color: white;">Releases</span>
-          </div>
-          <div class="keyElement" style="background-color: green;", id="keyRecycling">
-              <!-- <div class="keyButton" ></div> -->
-              <span class="keyElementText" style="color: white;">Recycling</span>
-          </div>
-          <div class="keyElement" style="background-color: yellow;" id="keyTreatment">
-              <!-- <div class="keyButton" id="keyTreatment"></div> -->
-              <span class="keyElementText" style="color: black;">Treatment</span></div>
-          <div class="keyElement" style="background-color: #3399FF;" id="keyRecovery">
-              <!-- <div class="keyButton" id="keyRecovery"></div> -->
-              <span class="keyElementText" style="color: white;">Recovery</span>
-          </div>
-      </div>
-
-
-      <svg id="list"></svg>
-
-      <!-- <svg id="graphLine" class="graphLine"></svg> -->
-      <svg id="graph1" class="graph"></svg>
-      <svg id="graph2" class="graph"></svg>
-    </div>
-
-
-    <div id="explorationToggle"></div>
-    <div id="explorationTools" class="no_selection">
-        <div class="explorationBackground"></div>
-    </div>
-
-
-
-    <div id="auxiliaryInfoTab" class="no_selection">
-        <div class="explorationBackground"></div>
-    </div>
-
-
-
-    <div id="dataView">
-    </div>
-    <div id="listView">
-    </div>
-
-
     <div id="tooltip">
     </div>
 
+    <div id="application">
+      <div id="facilityFilterContainer"></div>
+      <div id="chemicalFilterContainer"></div>
+      <div id="regulationFilterContainer"></div>
 
-
-
-    <script src="resources/colorbrewer.js"></script>
-    <!-- <script src="resources/d3.v3.min.js"></script>-->
-    <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-    <script src="resources/topojson.v1.min.js"></script>
-    <script src="src/TRIscript.js"></script>
+      <div id="chartContainer">
+        <div id="chartControls"></div>
+        <svg id="chart"></svg>
+      </div>
+    </div>
 </div>
 </body>
+
+<script data-main="src/scripts/app.js" src="src/scripts/components/require.js"></script>
 </html>
