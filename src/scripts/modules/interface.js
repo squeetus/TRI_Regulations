@@ -11,7 +11,7 @@ User Interface
 
 */
 
-define(["components/d3.v3.min", "modules/lineChart", "modules/filters", "css!style/interface"], function(d3, lineChart, filters) {
+define(["components/d3.v3.min", "css!style/interface"], function(d3, lineChart) {
 
   var components,
     dimensions,
@@ -25,11 +25,9 @@ define(["components/d3.v3.min", "modules/lineChart", "modules/filters", "css!sty
       (window.innerHeight > 500) ? window.innerHeight: 500
     ];
 
-  components = setupContainers(dimensions);
-  setupAttributes(components);
+  components = setupAttributes(setupContainers(dimensions));
 
   return {
-    lineChart: lineChart,
     components: components
   };
 
@@ -103,7 +101,7 @@ function setupAttributes(components) {
   components.chartSVG = components.chartArea.append("svg")
         .attr("id", "chartSVG")
         .classed("ui-svg", true);
-
+  return components;
 }
 
 function uiClick() {

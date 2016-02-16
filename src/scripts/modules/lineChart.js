@@ -7,19 +7,19 @@ define( [ "css!style/lineChart" ], function() {
     /* set up linechart attributes */
     config.data = ( config.data ) ? config.data : defaultData;
     config.domain = ( config.domain ) ? config.domain : [ 0, 26 ];
-    config.range = ( config.range ) ? config.range : [ 0, d3.max( config.data[0] ) ];
-    config.width = ( config.width ) ? config.height : 400;
+    config.range = ( config.range ) ? config.range : [ 0, d3.max( config.data ) ];
+    config.width = ( config.width ) ? config.width : 400;
     config.height = ( config.height ) ? config.height : 100;
     config.svg = ( config.svg ) ? config.svg : "#chartSVG";
-    config.m = ( config.m ) ? config.m : 5;
+    config.margin = ( config.margin ) ? config.margin : { x: 50, y: 10 };
     return config;
   }
 
   function draw(config) {
-    config = init( config );
 
-		var x = d3.scale.linear().domain( config.domain ).range( [0,config.width] );
-		var y = d3.scale.linear().domain( config.range ).range( [config.height,0] );
+    config = init( config );
+		var x = d3.scale.linear().domain( config.domain ).range( [config.margin.x,config.width] );
+		var y = d3.scale.linear().domain( config.range ).range( [config.height, config.margin.y] );
     var line = d3.svg.line()
 	    .x(function(d,i) {
 		      //  console.log('Plotting X value for data point: ' + d + ' using index: ' + i + ' to be at: ' + x(i) + ' using our xScale.');
@@ -36,7 +36,7 @@ define( [ "css!style/lineChart" ], function() {
         .attr("width", config.width)
         .attr("height", config.height)
       .append("svg:g")
-        .attr("transform", "translate(" + config.m + "," + config.m + ")");
+        .attr("transform", "translate(" + config.margin.x + "," + config.margin.y + ")");
 
       // create yAxis
       var xAxis = d3.svg.axis().scale(x).tickSize(-config.height).tickSubdivide(true);
@@ -52,11 +52,11 @@ define( [ "css!style/lineChart" ], function() {
       // Add the y-axis to the left
       graph.append("svg:g")
             .attr("class", "y axis")
-            .attr("transform", "translate(-25,0)")
+            .attr("transform", "translate(40,0)")
             .call(yAxisLeft);
 
       // do this AFTER the axes above so that the line is above the tick-lines
-    	graph.append("svg:path").attr("d", line(config.data[0]));
+    	graph.append("svg:path").attr("d", line(config.data));
   }
 
   return {
