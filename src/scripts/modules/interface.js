@@ -11,7 +11,7 @@ User Interface
 
 */
 
-define(["components/d3.v3.min", "modules/lineChart", "css!style/interface"], function(d3, lineChart) {
+define(["components/d3.v3.min", "modules/lineChart", "modules/filters", "css!style/interface"], function(d3, lineChart, filters) {
 
   var components,
     dimensions,
@@ -26,6 +26,7 @@ define(["components/d3.v3.min", "modules/lineChart", "css!style/interface"], fun
     ];
 
   components = setupContainers(dimensions);
+  setupAttributes(components);
 
   return {
     lineChart: lineChart,
@@ -58,7 +59,9 @@ function setupContainers(dimensions) {
       .style("margin-left", dimensions[0] * 0.2 + "px")
       .style("margin-top", dimensions[1] * 0.1 + "px")
       .style("position", "fixed")
-      .classed("ui-component", true);
+      .classed("ui-component", true)
+
+      .on("click", uiClick);
 
   components.facilityFilter = d3.select("#facilityFilterContainer")
     // .append("svg")
@@ -67,7 +70,9 @@ function setupContainers(dimensions) {
         .style("margin-left", dimensions[0] * 0.85 + "px")
         .style("margin-top", dimensions[1] * 0.1 + "px")
         .style("position", "fixed")
-        .classed("ui-component", true);
+        .classed("ui-component", true)
+
+        .on("click", uiClick);
 
   components.chemicalFilter = d3.select("#chemicalFilterContainer")
     // .append("svg")
@@ -76,7 +81,9 @@ function setupContainers(dimensions) {
         .style("margin-left", dimensions[0] * 0.10 + "px")
         .style("margin-top", dimensions[1] * 0.1 + "px")
         .style("position", "fixed")
-        .classed("ui-component", true);
+        .classed("ui-component", true)
+
+        .on("click", uiClick);
 
   components.regulationFilter = d3.select("#regulationFilterContainer")
     // .append("svg")
@@ -85,7 +92,20 @@ function setupContainers(dimensions) {
         .style("margin-left", dimensions[0] * 0.20 + "px")
         .style("margin-top", dimensions[1] * 0.75 + "px")
         .style("position", "fixed")
-        .classed("ui-component", true);
+        .classed("ui-component", true)
+
+        .on("click", uiClick);
 
   return components;
+}
+
+function setupAttributes(components) {
+  components.chartSVG = components.chartArea.append("svg")
+        .attr("id", "chartSVG")
+        .classed("ui-svg", true);
+
+}
+
+function uiClick() {
+  console.log("clicked ", this);
 }

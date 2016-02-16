@@ -8,8 +8,9 @@
 *              Spring 2016 (v1.0)
 *
 */
-requirejs(["modules/interface", 'json!data/allCas.json'], function(ui, data) {
-  ui.lineChart("hi");
+requirejs(['modules/visualizer', 'json!data/allCas.json'], function(vis, data) {
+  vis.init();
+  vis.lineChart.draw({});
   console.log(data);
 
 });

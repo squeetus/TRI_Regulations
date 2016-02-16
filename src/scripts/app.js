@@ -18,7 +18,8 @@ requirejs.config({
       text: '../../bower_components/text/text',
       css: '../../bower_components/require-css/css',
       style: '../styles/'
-    }
+    },
+    urlArgs: "ts="+new Date().getTime() // remove for production
 });
 
 // Start the main app logic.

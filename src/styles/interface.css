@@ -2,4 +2,14 @@
   border-radius: 10px;
   border: solid 2px lightgrey;
   background-color: grey;
+
+
+}
+
+.ui-svg {
+  margin-left: 5%;
+  margin-top: 5%;
+
+  width: 90%;
+  height: 80%;
 }
