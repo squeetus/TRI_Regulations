@@ -16,7 +16,8 @@ requirejs.config({
       data: '../data',
       json: '../../bower_components/requirejs-plugins/src/json',
       text: '../../bower_components/text/text',
-      css: '../../bower_components/require-css/css'
+      css: '../../bower_components/require-css/css',
+      style: '../styles/'
     }
 });
 

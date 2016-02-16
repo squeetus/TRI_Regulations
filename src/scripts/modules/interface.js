@@ -11,9 +11,9 @@ User Interface
 
 */
 
-define(["components/d3.v3.min", "modules/lineChart"], function(d3, lineChart) {
+define(["components/d3.v3.min", "modules/lineChart", "css!style/interface"], function(d3, lineChart) {
 
-  var components = [],
+  var components,
     dimensions,
     facilityFilter,
     chemicalFilter,
@@ -25,11 +25,11 @@ define(["components/d3.v3.min", "modules/lineChart"], function(d3, lineChart) {
       (window.innerHeight > 500) ? window.innerHeight: 500
     ];
 
-  setupContainers(dimensions);
+  components = setupContainers(dimensions);
 
   return {
     lineChart: lineChart,
-    "stuff": "things"
+    components: components
   };
 
 
@@ -51,38 +51,41 @@ define(["components/d3.v3.min", "modules/lineChart"], function(d3, lineChart) {
 
 */
 function setupContainers(dimensions) {
-  chartArea = d3.select("#chartContainer")
+  var components = {};
+  components.chartArea = d3.select("#chartContainer")
       .style("width", dimensions[0] * 0.6 + "px")
       .style("height", dimensions[1] * 0.6 + "px")
-      .style("border", "solid 1px black")
       .style("margin-left", dimensions[0] * 0.2 + "px")
       .style("margin-top", dimensions[1] * 0.1 + "px")
-      .style("position", "fixed");
+      .style("position", "fixed")
+      .classed("ui-component", true);
 
-  facilityFilter = d3.select("#facilityFilterContainer")
+  components.facilityFilter = d3.select("#facilityFilterContainer")
     // .append("svg")
         .style("width", dimensions[0] * 0.05 + "px")
         .style("height", dimensions[1] * 0.6 + "px")
-        .style("border", "solid 1px black")
         .style("margin-left", dimensions[0] * 0.85 + "px")
         .style("margin-top", dimensions[1] * 0.1 + "px")
-        .style("position", "fixed");
+        .style("position", "fixed")
+        .classed("ui-component", true);
 
-  chemicalFilter = d3.select("#chemicalFilterContainer")
+  components.chemicalFilter = d3.select("#chemicalFilterContainer")
     // .append("svg")
         .style("width", dimensions[0] * 0.05 + "px")
         .style("height", dimensions[1] * 0.6 + "px")
-        .style("border", "solid 1px black")
         .style("margin-left", dimensions[0] * 0.10 + "px")
         .style("margin-top", dimensions[1] * 0.1 + "px")
-        .style("position", "fixed");
+        .style("position", "fixed")
+        .classed("ui-component", true);
 
-  regulationFilter = d3.select("#regulationFilterContainer")
+  components.regulationFilter = d3.select("#regulationFilterContainer")
     // .append("svg")
         .style("width", dimensions[0] * 0.6 + "px")
         .style("height", dimensions[1] * 0.08 + "px")
-        .style("border", "solid 1px black")
         .style("margin-left", dimensions[0] * 0.20 + "px")
         .style("margin-top", dimensions[1] * 0.75 + "px")
-        .style("position", "fixed");
+        .style("position", "fixed")
+        .classed("ui-component", true);
+
+  return components;
 }
