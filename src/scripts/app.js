@@ -14,8 +14,9 @@ requirejs.config({
     baseUrl: 'src/scripts',
     paths: {
       data: '../data',
-      json: 'components/json',
-      text: 'components/text'
+      json: '../../bower_components/requirejs-plugins/src/json',
+      text: '../../bower_components/text/text',
+      css: '../../bower_components/require-css/css'
     }
 });
 
