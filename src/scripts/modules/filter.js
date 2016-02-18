@@ -3,20 +3,25 @@ define(function() {
 
   /* filter types supported */
   var filterOptions = {
-    facilities: [
+    facilities: [           // filter facilities
       "byNaics"
     ],
-    chemicals: [
+    chemicals: [            // filter chemicals
       "byChemical",
       "byHealthImpact",
       "byClassification"
+    ],
+    usage: [                // filter usage type
+      "fugitiveAir",
+      "stackAir"
     ]
   };
 
   /* filter values */
-  var filter = {
+  var filters = {
     industry: [2211],
-    chemical: []
+    chemical: [],
+    usage: []
   };
 
   /* update filter for charts */
@@ -45,9 +50,40 @@ define(function() {
 
   }
 
+  /* sum up the usage data for the given data */
+  function aggregateUsage(data) {
+      var chartData = [];
+      for(var i = 0; i < 27; i++) {
+        chartData[i] = 0;
+      }
+
+      for(var f in data) {
+        for(var j = 0; j < data[f].stack.length; j++) {
+          chartData[j] += data[f].stack[j] + data[f].fugitive[j];
+        }
+      }
+
+      return chartData;
+  }
+
+  function filter(data) {
+    var fData = data.facilities;
+
+
+
+    /* filter by particular filter settings */
+    // for(var f in config) {
+    //   switch(f) {
+    //     case "regulation":
+    //       fData = filterByRegulation(config[f]);
+    //   }
+    // }
+    return aggregateUsage(fData);
+  }
 
   return {
     filter: filter,
+    filters: filters,
     options: filterOptions,
     updateFilter: updateFilter
   };

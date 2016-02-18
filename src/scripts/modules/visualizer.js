@@ -1,6 +1,6 @@
-define(["modules/interface", "modules/lineChart", "modules/dataInterface" ], function(ui, lineChart, data) {
+define(["modules/interface", "modules/lineChart", "modules/dataInterface", "modules/filter"], function(ui, lineChart, data, filter) {
 
-  /* Configure the data */ 
+  /* Configure the visualization chart/data */
   var config = {
     data: null,         // data to visualize
     domain: [ 0, 26 ],  // domain: fixed to 1986-2013
@@ -16,7 +16,7 @@ define(["modules/interface", "modules/lineChart", "modules/dataInterface" ], fun
   /* Initialize the config object */
   function init() {
     // config.data = (data.data) ? data.filter({"regulation": "CAIR"}) : null;
-    config.data = (data.data) ? data.filter() : null;
+    config.data = (data.data) ? filter.filter(data.data) : null;
     config.width = ui.components.chartSVG[0][0].width.animVal.value * 0.9;
     config.height = ui.components.chartSVG[0][0].height.animVal.value * 0.9;
   }
