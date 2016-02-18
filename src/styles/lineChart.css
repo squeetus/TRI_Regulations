@@ -22,6 +22,7 @@ path {
 }
 
 .y.axis line, .y.axis path {
-  fill: none;
-  stroke: #000;
+  /*fill: none;*/
+	stroke-opacity: .5;
+  stroke: lightgrey;
 }

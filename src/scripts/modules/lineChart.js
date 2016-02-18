@@ -39,16 +39,21 @@ define( [ "css!style/lineChart" ], function() {
         .attr("transform", "translate(" + config.margin.x + "," + config.margin.y + ")");
 
       // create yAxis
-      var xAxis = d3.svg.axis().scale(x).tickSize(-config.height).tickSubdivide(true);
+      var xAxis = d3.svg.axis().scale(x)
+            .tickSize(-config.height)
+            .tickSubdivide(true)
+            .tickFormat(function(d) { return d + 1986; });
       // Add the x-axis.
       graph.append("svg:g")
           .attr("class", "x axis")
-          .attr("transform", "translate(0," + config.height + ")")
+          .attr("transform", "translate(0," + (config.height ) + ")")
           .call(xAxis);
 
 
       // create left yAxis
-      var yAxisLeft = d3.svg.axis().scale(y).ticks(4).orient("left");
+      var yAxisLeft = d3.svg.axis().scale(y).orient("left")
+            .tickSize(-config.width)
+            .tickSubdivide(true);
       // Add the y-axis to the left
       graph.append("svg:g")
             .attr("class", "y axis")
