@@ -1,12 +1,20 @@
 /* tell the SVG path to be a thin blue line without any area fill */
 path {
-	stroke: white;
+	stroke: blue;
 	stroke-width: 2;
 	fill: none;
+	pointer-events: none;
+}
+
+.area {
+  fill: steelblue;
+	opacity: 0.8;
+	pointer-events: none;
 }
 
 .axis {
   shape-rendering: crispEdges;
+	pointer-events: none;
 }
 
 .x.axis line {
@@ -14,7 +22,7 @@ path {
 }
 
 .x.axis .minor {
-  stroke-opacity: .5;
+  stroke-opacity: .2;
 }
 
 .x.axis path {
@@ -23,6 +31,6 @@ path {
 
 .y.axis line, .y.axis path {
   /*fill: none;*/
-	stroke-opacity: .5;
+	stroke-opacity: .2;
   stroke: lightgrey;
 }

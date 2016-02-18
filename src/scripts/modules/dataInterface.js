@@ -1,40 +1,11 @@
 /*
 
-  Filter options and settings for TRI data
+  Data import and settings for TRI data
 
 */
 define(['json!data/allCas.json'], function(data) {
-  var filterOptions = {
-    facilities: [
-      "byNaics"
-    ],
-    chemicals: [
-      "byChemical",
-      "byHealthImpact",
-      "byClassification"
-    ]
-  };
 
-  function filterByRegulation(regulation) {
-    //lookup regulation in a regulation dataset or class
-    // obtain the attributes to filter by..
-    // hard-coded in this first case:
-    //    only correct state in dataset
-    //    only correct industry in dataset
-
-    var filteredData = data.facilities.filter(function(f) {
-      console.log(f);
-    });
-
-    return filteredData;
-
-  }
-
-  /*
-
-    sum up the usage data for the given data
-
-  */
+  /* sum up the usage data for the given data */
   function aggregateUsage(data) {
       var chartData = [];
       for(var i = 0; i < 27; i++) {
@@ -52,7 +23,6 @@ define(['json!data/allCas.json'], function(data) {
 
   return {
     data: data,
-    options: filterOptions,
     filter: function(config) {
       var fData = data.facilities;
       if(!config) {
