@@ -20,7 +20,7 @@ define(function() {
   /* filter values */
   var filters = {
     industry: [2211],
-    chemical: ["71432", "N100"],
+    chemical: [],
     usage: []
   };
 
@@ -50,9 +50,34 @@ define(function() {
 
   }
 
+  function aggregateChemicalUsage(data, filter) {
+    var chartData = [],
+        i = 0,
+        j = 0;
+
+    for( i = 0; i < 27; i++ ) {
+      chartData[ i ] = 0;
+    }
+
+
+    for( var facility in data ) {
+      for( var chem in data[ facility ].chemicals ) {
+        if( filter.chemical.indexOf( data[ facility ].chemicals[ chem ].chemical ) >= 0 ) {
+          for( var year in data[ facility ].chemicals[ chem ].stack ) {
+              chartData[ year ] += data[ facility ].chemicals[ chem ].stack[ year ];
+              chartData[ year ] += data[ facility ].chemicals[ chem ].fugitive[ year ];
+          }
+        }
+      }
+    }
+    console.log(chartData);
+    return chartData;
+  }
+
   /* sum up the usage data for the given data */
   function aggregateUsage(data) {
       var chartData = [];
+
       for(var i = 0; i < 27; i++) {
         chartData[i] = 0;
       }
@@ -130,14 +155,19 @@ define(function() {
 
     console.log( "Filtered down to ", fData.length, "facilities:", fData);
 
-    // filter aggregation by chemical still
-    return aggregateUsage(fData);
+    if(filters.chemical.length)
+      return aggregateChemicalUsage(fData, filters);
+    else
+      return aggregateUsage(fData);
+
   }
 
-  return {
-    filter: filter,
-    filters: filters,
-    options: filterOptions,
-    updateFilter: updateFilter
-  };
+  // return function() {
+    return {
+      filter: filter,
+      filters: filters,
+      options: filterOptions,
+      updateFilter: updateFilter
+    };
+  // };
 });

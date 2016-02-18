@@ -10,5 +10,7 @@
 */
 requirejs(['modules/visualizer'], function(vis) {
   vis.init();
-  vis.lineChart();
+  vis.setNumCharts(2);
+  vis.lineChart(1);
+  vis.lineChart(2);
 });
